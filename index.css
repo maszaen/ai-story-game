@@ -62,6 +62,11 @@ body {
   flex-shrink: 0;
 }
 
+.game-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dark) transparent;
+}
+
 /* Main game area: flex column, full height */
 .game-main {
   flex: 1;
@@ -118,6 +123,7 @@ body {
     padding: 16px;
     overflow-y: auto;
   }
+  
   .game-main {
     height: 100vh;
     flex: 1;
@@ -211,11 +217,11 @@ body {
 .btn-choice::before {
   content: '◆';
   position: absolute;
-  top: -6px;
+  top: -13.7px;
   left: 50%;
   transform: translateX(-50%);
   color: var(--gold-dark);
-  font-size: 8px;
+  font-size: 20px;
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -451,6 +457,36 @@ body {
 .choice-enter:nth-child(1) { animation-delay: 0.1s; }
 .choice-enter:nth-child(2) { animation-delay: 0.2s; }
 .choice-enter:nth-child(3) { animation-delay: 0.3s; }
+
+/* Choice exit animations */
+.choice-exit-fade {
+  animation: choice-fade-out 0.3s ease forwards;
+}
+
+.choice-exit-selected {
+  animation: choice-selected-pulse 0.35s ease forwards;
+}
+
+@keyframes choice-fade-out {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes choice-selected-pulse {
+  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 rgba(201, 168, 76, 0); }
+  40% { opacity: 1; transform: scale(1.02); box-shadow: 0 0 20px rgba(201, 168, 76, 0.3); border-color: rgba(201, 168, 76, 0.6); }
+  100% { opacity: 0; transform: scale(0.97) translateY(4px); box-shadow: 0 0 0 rgba(201, 168, 76, 0); }
+}
+
+/* Loader entrance inside choice container */
+.choice-loader-enter {
+  animation: choice-loader-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes choice-loader-in {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
 
 /* ===== Game Over Banner ===== */
 

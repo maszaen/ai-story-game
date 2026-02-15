@@ -224,7 +224,7 @@ Balas hanya dengan objek JSON yang diminta.`,
 
       let imageBase64 = '';
       const candidate = imageResponse.candidates?.[0];
-      if (candidate) {
+      if (candidate?.content?.parts) {
         for (const part of candidate.content.parts) {
           if (part.inlineData) {
             imageBase64 = part.inlineData.data;
