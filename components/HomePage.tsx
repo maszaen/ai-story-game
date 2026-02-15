@@ -217,21 +217,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNewGame, onLoadGame, onOpe
         </div>
       </button>
 
-      {/* Settings Button */}
-      <button onClick={onOpenSettings} className="group mb-10 z-10">
-        <div
-          className="relative px-8 py-2.5 rounded border border-amber-900/40 hover:border-amber-700/60 transition-all duration-300"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(20,14,8,0.7) 0%, rgba(12,8,4,0.8) 100%)",
-            fontFamily: "'Cinzel', serif",
-          }}
-        >
-          <span className="text-amber-500 text-sm tracking-widest uppercase group-hover:text-amber-400 transition-colors flex items-center gap-2">
-            <IconGear size={14} /> Pengaturan
-          </span>
-        </div>
-      </button>
+      {/* Settings Button — only show when API key is available */}
+      {hasApiKey() && (
+        <button onClick={onOpenSettings} className="group mb-10 z-10">
+          <div
+            className="relative px-8 py-2.5 rounded border border-amber-900/40 hover:border-amber-700/60 transition-all duration-300"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(20,14,8,0.7) 0%, rgba(12,8,4,0.8) 100%)",
+              fontFamily: "'Cinzel', serif",
+            }}
+          >
+            <span className="text-amber-500 text-sm tracking-widest uppercase group-hover:text-amber-400 transition-colors flex items-center gap-2">
+              <IconGear size={14} /> Pengaturan
+            </span>
+          </div>
+        </button>
+      )}
 
       {/* Saved Games */}
       <div className="w-full max-w-2xl z-10 px-1">
@@ -413,7 +415,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNewGame, onLoadGame, onOpe
           className="text-amber-900/40 text-xs tracking-wider"
           style={{ fontFamily: "'Cinzel', serif" }}
         >
-          Dibuat dengan AI ✦ Gemini
+          Created by @maszaen, powered by ✦ Gemini
         </p>
       </div>
 
