@@ -1,0 +1,5 @@
+{
+  "name": "AI Speech Synthesizer",
+  "description": "An application that generates audio from text using the Gemini API and provides real-time word highlighting during playback.",
+  "requestFramePermissions": []
+}

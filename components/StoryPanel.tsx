@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import type { Scene } from '../types';
 import { IconSkull } from './Icons';
 import { LoadingSpinner } from './LoadingSpinner';
+import { SpeakableText } from './SpeakableText';
 
 interface StoryPanelProps {
   scene: Scene | null;
@@ -69,9 +70,9 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
                 </div>
               )}
 
-              {/* Text */}
+              {/* Text with TTS */}
               <div className="px-6 md:px-8 py-4">
-                <p className="story-text whitespace-pre-wrap">{segment.text}</p>
+                <SpeakableText text={segment.text} />
               </div>
 
               {/* Segment divider (not after last) */}

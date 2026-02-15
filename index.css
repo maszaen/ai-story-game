@@ -593,3 +593,83 @@ body {
   height: 4px;
   box-shadow: 0 0 6px rgba(201, 168, 76, 0.3);
 }
+
+/* ===== Speech / TTS Button & Word Highlighting ===== */
+
+.speech-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55em;
+  height: 1.55em;
+  margin-right: 0.35em;
+  vertical-align: middle;
+  cursor: pointer;
+  border-radius: 50%;
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  color: rgba(201, 168, 76, 0.6);
+  transition: all 0.25s ease;
+  position: relative;
+  top: -0.05em;
+  flex-shrink: 0;
+}
+
+.speech-btn:hover {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: rgba(201, 168, 76, 0.5);
+  color: #c9a84c;
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.15);
+}
+
+.speech-btn:active {
+  transform: scale(0.92);
+}
+
+.speech-btn:focus-visible {
+  outline: 2px solid rgba(201, 168, 76, 0.5);
+  outline-offset: 2px;
+}
+
+.speech-btn-playing {
+  background: rgba(201, 168, 76, 0.18);
+  border-color: rgba(201, 168, 76, 0.5);
+  color: #c9a84c;
+  box-shadow: 0 0 14px rgba(201, 168, 76, 0.2);
+  animation: speech-btn-glow 1.5s ease-in-out infinite;
+}
+
+.speech-btn-loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.speech-btn-icon {
+  width: 0.75em;
+  height: 0.75em;
+}
+
+.speech-btn-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Word highlighting — medieval gold glow */
+.speech-word-highlight {
+  background: rgba(201, 168, 76, 0.15);
+  color: #c9a84c;
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: -1px -2px;
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.12);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+@keyframes speech-btn-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(201, 168, 76, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(201, 168, 76, 0.3); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
