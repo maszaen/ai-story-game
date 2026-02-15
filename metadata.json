@@ -1,0 +1,5 @@
+{
+  "name": "Infinite Adventure Engine",
+  "description": "A text-based choose-your-own-adventure game powered by Gemini, featuring a dynamically generated story, real-time images, and a persistent world state that tracks your inventory and quests.",
+  "requestFramePermissions": []
+}
