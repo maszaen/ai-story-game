@@ -491,3 +491,105 @@ body {
 .image-reveal {
   animation: image-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* ===== Start Screen Exit ===== */
+
+@keyframes start-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(6px);
+  }
+}
+
+.start-screen-exit {
+  animation: start-exit 0.6s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* ===== Medieval Typewriter Loader ===== */
+
+@keyframes loader-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.loader-entrance {
+  animation: loader-entrance 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Typewriter cursor blink */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor {
+  animation: cursor-blink 0.7s step-end infinite;
+  color: #c9a84c;
+  font-weight: 100;
+  margin-left: 1px;
+}
+
+/* Quill orbit loader */
+.medieval-quill-loader {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quill-orbit {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  animation: medieval-spin 3s linear infinite;
+}
+
+.quill-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  top: 50%;
+  left: 50%;
+}
+
+.quill-dot:nth-child(1) {
+  transform: translate(-50%, -50%) translateY(-24px);
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.6);
+}
+
+.quill-dot:nth-child(2) {
+  transform: translate(-50%, -50%) translateY(-24px) rotate(120deg);
+  transform-origin: 0 24px;
+  opacity: 0.6;
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.4);
+}
+
+.quill-dot:nth-child(3) {
+  transform: translate(-50%, -50%) translateY(-24px) rotate(240deg);
+  transform-origin: 0 24px;
+  opacity: 0.3;
+  width: 4px;
+  height: 4px;
+  box-shadow: 0 0 6px rgba(201, 168, 76, 0.3);
+}

@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             quests.map((quest, index) => (
               <div
                 key={index}
-                className="flex items-start gap-2 rounded"
+                className="flex items-center gap-2 rounded"
                 style={{
                   padding: '6px 10px',
                   border: `1px solid ${quest.completed ? 'rgba(100,160,80,0.25)' : 'rgba(201,168,76,0.12)'}`,
@@ -137,7 +137,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   color: quest.completed ? '#6a9a50' : 'rgba(201,168,76,0.5)',
                   fontSize: '14px',
                   flexShrink: 0,
-                  marginTop: '1px',
+                  marginBottom: '5px',
+                  marginTop: '3px',
                 }}>
                   {quest.completed ? <IconCheck size={14} /> : <IconDiamond size={12} />}
                 </span>

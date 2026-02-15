@@ -8,6 +8,12 @@ export interface QuestItem {
 }
 
 export interface GameStateUpdate {
+  /** Shared visual context for ALL images in this scene — location, time, weather, lighting */
+  sceneVisualContext: string;
+  /** Persistent description of the main character's appearance (updated when appearance changes) */
+  characterVisualIdentity: string;
+  /** Persistent description of the current location/environment */
+  locationVisualIdentity: string;
   /** Story segments — each segment pairs with one image */
   storySegments: {
     text: string;

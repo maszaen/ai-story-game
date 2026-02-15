@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { GameSettings, ArtStyle, SegmentCount } from '../services/settings';
-import { ART_STYLE_LABELS } from '../services/settings';
+import type { GameSettings, ArtStyle, SegmentCount, Gender } from '../services/settings';
+import { ART_STYLE_LABELS, GENDER_LABELS } from '../services/settings';
 import { setApiKey, isEnvKey, hasSessionKey } from '../services/apiKey';
 import type { ImageSize } from './ImageSizeSelector';
 import { IconGear } from './Icons';
@@ -122,6 +122,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
             )}
           </SettingCard>
         )}
+
+        {/* Gender */}
+        <SettingCard title="Gender Karakter" desc="Gender karakter utama dalam cerita. Mempengaruhi narasi dan penampilan visual.">
+          <div className="flex gap-2">
+            {(Object.entries(GENDER_LABELS) as [Gender, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => update({ gender: key })}
+                className={`flex-1 py-2 rounded border transition-all duration-200 ${
+                  settings.gender === key
+                    ? 'border-amber-500 bg-amber-900/30 text-amber-400'
+                    : 'border-amber-900/40 text-amber-700/60 hover:border-amber-700/60 hover:text-amber-600'
+                }`}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '0.8rem' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </SettingCard>
 
         {/* Image Quality */}
         <SettingCard title="Kualitas Gambar" desc="Resolusi gambar yang dihasilkan AI. Lebih tinggi = lebih detail tapi lebih lambat.">

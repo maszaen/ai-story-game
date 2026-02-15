@@ -2,12 +2,19 @@ import type { ImageSize } from '../components/ImageSizeSelector';
 
 export type ArtStyle = 'ghibli' | 'dark-fantasy' | 'watercolor' | 'realistic' | 'pixel-art' | 'comic';
 export type SegmentCount = 2 | 3;
+export type Gender = 'male' | 'female';
+
+export const GENDER_LABELS: Record<Gender, string> = {
+  'male': 'Laki-laki',
+  'female': 'Perempuan',
+};
 
 export interface GameSettings {
   imageSize: ImageSize;
   segmentsPerTurn: SegmentCount;
   artStyle: ArtStyle;
   autoSave: boolean;
+  gender: Gender;
 }
 
 const SETTINGS_KEY = 'adventure-engine-settings';
@@ -35,6 +42,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   segmentsPerTurn: 2,
   artStyle: 'ghibli',
   autoSave: true,
+  gender: 'male',
 };
 
 export function getSettings(): GameSettings {

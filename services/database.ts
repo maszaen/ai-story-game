@@ -21,6 +21,10 @@ export interface SaveData {
   turnCount: number;
   isGameOver: boolean;
   gameOverMessage: string;
+  /** Persistent visual identity of the main character */
+  characterVisualIdentity: string;
+  /** Persistent visual identity of the current location */
+  locationVisualIdentity: string;
 }
 
 function openDB(): Promise<IDBDatabase> {

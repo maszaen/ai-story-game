@@ -15,6 +15,141 @@ import type { Genre } from './constants';
 
 type AppView = 'home' | 'settings' | 'genre-picker' | 'saved-games' | 'game';
 
+const LOADER_TEXTS = [
+  'Sang penulis takdir menorehkan tinta di lembaran nasibmu...',
+  'Dunia baru sedang tercipta dari kekosongan...',
+  'Bintang-bintang bergeser, membentuk jalan petualanganmu...',
+  'Ramalan kuno berbisik tentang kedatanganmu...',
+  'Kabut waktu menyingkap tabir takdirmu...',
+  'Para dewa merajut benang ceritamu...',
+  'Gerbang dimensi terbuka, menanti langkah pertamamu...',
+  'Kitab nasib membuka halamannya untukmu...',
+];
+
+const MedievalTypewriterLoader: React.FC = () => {
+  const [textIndex, setTextIndex] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [phase, setPhase] = useState<'typing' | 'idle' | 'fading'>('typing');
+  const [opacity, setOpacity] = useState(1);
+
+  useEffect(() => {
+    const fullText = LOADER_TEXTS[textIndex % LOADER_TEXTS.length];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const punctuation = '.,?!;:-–…';
+
+    if (phase === 'typing') {
+      setOpacity(1);
+      let i = 0;
+      // Simulate human typing: variable base speed that drifts gradually
+      let currentSpeed = 38;
+
+      const type = () => {
+        if (i < fullText.length) {
+          const char = fullText.charAt(i);
+          setDisplayText(fullText.slice(0, i + 1));
+          i++;
+
+          // Drift the base speed slightly (like a human's rhythm shifting)
+          currentSpeed += (Math.random() - 0.5) * 12;
+          currentSpeed = Math.max(25, Math.min(65, currentSpeed)); // clamp 25-65ms
+
+          let delay = currentSpeed + Math.random() * 20;
+
+          // Pause longer on punctuation (thinking pause)
+          if (punctuation.includes(char)) {
+            delay += 280 + Math.random() * 150;
+          }
+
+          // Occasional micro-hesitation mid-word (~12% chance)
+          if (Math.random() < 0.12 && !punctuation.includes(char) && char !== ' ') {
+            delay += 60 + Math.random() * 80;
+          }
+
+          // Slight pause after spaces (word boundary)
+          if (char === ' ') {
+            delay += 15 + Math.random() * 30;
+          }
+
+          const t = setTimeout(type, delay);
+          timers.push(t);
+        } else {
+          setPhase('idle');
+        }
+      };
+
+      const starter = setTimeout(type, 80);
+      timers.push(starter);
+
+      return () => { for (const t of timers) clearTimeout(t); };
+    }
+
+    if (phase === 'idle') {
+      const t = setTimeout(() => setPhase('fading'), 3500);
+      timers.push(t);
+      return () => { for (const t of timers) clearTimeout(t); };
+    }
+
+    if (phase === 'fading') {
+      setOpacity(0);
+      const t = setTimeout(() => {
+        setTextIndex(prev => prev + 1);
+        setDisplayText('');
+        // Go straight to typing — no fade in, typewriter starts from empty
+        setPhase('typing');
+      }, 600);
+      timers.push(t);
+      return () => { for (const t of timers) clearTimeout(t); };
+    }
+  }, [phase, textIndex]);
+
+  return (
+    <div className="text-center loader-entrance">
+      {/* Decorative top ornament */}
+      <div className="mb-6" style={{ color: 'rgba(201,168,76,0.3)' }}>
+        <span style={{ fontSize: '1.5rem', letterSpacing: '0.5em' }}>⸎ ◆ ⸎</span>
+      </div>
+
+      {/* Spinner */}
+      <div className="flex justify-center mb-8">
+        <div className="medieval-quill-loader">
+          <div className="quill-orbit">
+            <span className="quill-dot" />
+            <span className="quill-dot" />
+            <span className="quill-dot" />
+          </div>
+        </div>
+      </div>
+
+      {/* Typewriter text */}
+      <div className="min-h-[3rem] flex items-center justify-center px-4">
+        <p
+          style={{
+            fontFamily: "'Crimson Text', serif",
+            color: '#c9a84c',
+            fontSize: '1.15rem',
+            fontStyle: 'italic',
+            letterSpacing: '0.03em',
+            lineHeight: '1.7',
+            opacity,
+            transition: phase === 'fading' ? 'opacity 0.5s ease' : 'none',
+            maxWidth: '480px',
+          }}
+        >
+          {displayText}
+          <span className="typewriter-cursor">|</span>
+        </p>
+      </div>
+
+      {/* Decorative bottom ornament */}
+      <div className="mt-6" style={{ color: 'rgba(201,168,76,0.2)' }}>
+        <span style={{ fontSize: '0.7rem', fontFamily: "'Cinzel', serif", letterSpacing: '0.3em', textTransform: 'uppercase' }}>
+          Mohon tunggu sejenak
+        </span>
+      </div>
+    </div>
+  );
+};
+
 // Page transition wrapper — re-mounts children on key change to trigger CSS animation
 const PageTransition: React.FC<{ viewKey: string; children: React.ReactNode }> = ({ viewKey, children }) => {
   return (
@@ -39,7 +174,12 @@ const App: React.FC = () => {
   const [quests, setQuests] = useState<QuestItem[]>([]);
   const [storyHistory, setStoryHistory] = useState<{ role: string; parts: { text: string }[] }[]>([]);
 
+  const [characterVisualIdentity, setCharacterVisualIdentity] = useState('');
+  const [locationVisualIdentity, setLocationVisualIdentity] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
+  const [showStartLoader, setShowStartLoader] = useState(false);
+  const [startFadingOut, setStartFadingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
@@ -73,6 +213,8 @@ const App: React.FC = () => {
     turns: number,
     gameOver: boolean,
     goMessage: string,
+    charVisual: string,
+    locVisual: string,
   ) => {
     const latestScene = scenes[scenes.length - 1];
     const save: SaveData = {
@@ -89,6 +231,8 @@ const App: React.FC = () => {
       turnCount: turns,
       isGameOver: gameOver,
       gameOverMessage: goMessage,
+      characterVisualIdentity: charVisual,
+      locationVisualIdentity: locVisual,
     };
     await putSave(save);
   }, []);
@@ -109,7 +253,11 @@ const App: React.FC = () => {
     setInventory([]);
     setQuests([]);
     setStoryHistory([]);
+    setCharacterVisualIdentity('');
+    setLocationVisualIdentity('');
     setGameStarted(false);
+    setStartFadingOut(false);
+    setShowStartLoader(false);
     setIsGameOver(false);
     setGameOverMessage('');
     setError(null);
@@ -125,6 +273,8 @@ const App: React.FC = () => {
     setInventory(save.inventory);
     setQuests(save.quests);
     setStoryHistory(save.storyHistory);
+    setCharacterVisualIdentity(save.characterVisualIdentity || '');
+    setLocationVisualIdentity(save.locationVisualIdentity || '');
     setGameStarted(true);
     setIsGameOver(save.isGameOver);
     setGameOverMessage(save.gameOverMessage);
@@ -154,9 +304,15 @@ const App: React.FC = () => {
   }, []);
 
   const startGame = useCallback(async () => {
-    setGameStarted(true);
+    // Phase 1: fade out start screen text
+    setStartFadingOut(true);
     setIsLoading(true);
     setError(null);
+
+    // Phase 2: after fade animation, show the typewriter loader
+    await new Promise(r => setTimeout(r, 700));
+    setShowStartLoader(true);
+
     try {
       const prompt = selectedGenre
         ? `${selectedGenre.initialPrompt}\n\nPENTING: Semua teks cerita, pilihan, quest, dan item inventory HARUS dalam Bahasa Indonesia.`
@@ -173,6 +329,8 @@ const App: React.FC = () => {
       setInventory(newInv);
       setQuests(result.quests);
       setStoryHistory(result.newHistory);
+      setCharacterVisualIdentity(result.characterVisualIdentity);
+      setLocationVisualIdentity(result.locationVisualIdentity);
       setIsGameOver(result.scene.isGameOver);
       setGameOverMessage(result.scene.gameOverMessage);
 
@@ -180,14 +338,20 @@ const App: React.FC = () => {
         await saveProgress(
           newScenes, 0, newInv, result.quests, result.newHistory,
           currentSaveId, saveName, newTurnCount,
-          result.scene.isGameOver, result.scene.gameOverMessage
+          result.scene.isGameOver, result.scene.gameOverMessage,
+          result.characterVisualIdentity, result.locationVisualIdentity
         );
       }
+
+      // Phase 3: loading done — switch to game view
+      setGameStarted(true);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Terjadi kesalahan yang tidak diketahui.';
       setError(`Gagal memulai petualangan. ${errorMessage}`);
     } finally {
       setIsLoading(false);
+      setShowStartLoader(false);
+      setStartFadingOut(false);
     }
   }, [settings, selectedGenre, currentSaveId, saveName, saveProgress]);
 
@@ -196,7 +360,10 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const result = await getNextScene(storyHistory, choice, settings);
+      const result = await getNextScene(storyHistory, choice, settings, {
+        characterVisualIdentity,
+        locationVisualIdentity,
+      });
 
       const newTurnCount = turnCount + 1;
       setTurnCount(newTurnCount);
@@ -213,6 +380,8 @@ const App: React.FC = () => {
 
       setQuests(result.quests);
       setStoryHistory(result.newHistory);
+      setCharacterVisualIdentity(result.characterVisualIdentity);
+      setLocationVisualIdentity(result.locationVisualIdentity);
       setIsGameOver(result.scene.isGameOver);
       setGameOverMessage(result.scene.gameOverMessage);
 
@@ -220,7 +389,8 @@ const App: React.FC = () => {
         await saveProgress(
           newScenes, newIdx, updatedInv, result.quests, result.newHistory,
           currentSaveId, saveName, newTurnCount,
-          result.scene.isGameOver, result.scene.gameOverMessage
+          result.scene.isGameOver, result.scene.gameOverMessage,
+          result.characterVisualIdentity, result.locationVisualIdentity
         );
       }
     } catch (e) {
@@ -229,7 +399,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress]);
+  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity]);
 
   // HOME VIEW
   if (view === 'home') {
@@ -352,48 +522,45 @@ const App: React.FC = () => {
         )}
 
         {!gameStarted ? (
-          /* Start screen */
+          /* Start screen — fades out, then shows typewriter loader */
           <div className="flex-1 flex flex-col items-center justify-center p-8">
-            <div className="text-center">
-              <div className="mb-6">
-                <span className="tracking-[0.4em] uppercase" style={{
-                  fontFamily: "'Cinzel', serif",
-                  color: 'rgba(201,168,76,0.5)',
-                  fontSize: '0.75rem',
-                }}>
-                  Babak Baru Dimulai
-                </span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{
-                fontFamily: "'Cinzel Decorative', 'Cinzel', serif",
-                color: '#c9a84c',
-                textShadow: '0 0 40px rgba(201, 168, 76, 0.2)',
-              }}>
-                {saveName}
-              </h1>
-              <p className="mb-6" style={{
-                fontFamily: "'Crimson Text', serif",
-                color: 'rgba(180,160,120,0.6)',
-                fontStyle: 'italic',
-                fontSize: '1.1rem',
-              }}>
-                Ceritamu menunggu untuk ditulis. Apakah kamu siap?
-              </p>
-              <button
-                onClick={startGame}
-                disabled={isLoading}
-                className="btn-medieval rounded-lg text-base px-10 py-4"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-3">
-                    <div className="medieval-spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-                    Memuat...
+            {!showStartLoader ? (
+              <div className={`text-center ${startFadingOut ? 'start-screen-exit' : ''}`}>
+                <div className="mb-6">
+                  <span className="tracking-[0.4em] uppercase" style={{
+                    fontFamily: "'Cinzel', serif",
+                    color: 'rgba(201,168,76,0.5)',
+                    fontSize: '0.75rem',
+                  }}>
+                    Babak Baru Dimulai
                   </span>
-                ) : (
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{
+                  fontFamily: "'Cinzel Decorative', 'Cinzel', serif",
+                  color: '#c9a84c',
+                  textShadow: '0 0 40px rgba(201, 168, 76, 0.2)',
+                }}>
+                  {saveName}
+                </h1>
+                <p className="mb-6" style={{
+                  fontFamily: "'Crimson Text', serif",
+                  color: 'rgba(180,160,120,0.6)',
+                  fontStyle: 'italic',
+                  fontSize: '1.1rem',
+                }}>
+                  Ceritamu menunggu untuk ditulis. Apakah kamu siap?
+                </p>
+                <button
+                  onClick={startGame}
+                  disabled={isLoading}
+                  className="btn-medieval rounded-lg text-base px-10 py-4"
+                >
                   <span className="flex items-center gap-2"><IconSwords size={18} /> Mulai Petualangan <IconSwords size={18} /></span>
-                )}
-              </button>
-            </div>
+                </button>
+              </div>
+            ) : (
+              <MedievalTypewriterLoader />
+            )}
           </div>
         ) : (
           <>
@@ -405,8 +572,8 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* Fixed bottom: choices (only on latest scene) */}
-            {isViewingLatest && (
+            {/* Fixed bottom: choices (only on latest scene, not during initial generation) */}
+            {isViewingLatest && !(isLoading && sceneHistory.length === 0) && (
               <div className="game-bottom-bar-wrapper">
                 <div className="game-bottom-bar">
                   <ChoiceButtons

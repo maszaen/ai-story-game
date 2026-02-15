@@ -29,19 +29,7 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
   }, [expandedImage, closeLightbox]);
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <LoadingSpinner />
-        <p className="mt-5 glow-pulse" style={{
-          fontFamily: "'Cinzel', serif",
-          color: '#c9a84c',
-          fontSize: '0.9rem',
-          letterSpacing: '0.15em',
-        }}>
-          Merangkai babak selanjutnya...
-        </p>
-      </div>
-    );
+    return null;
   }
 
   if (!scene) {
