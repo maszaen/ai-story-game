@@ -107,22 +107,27 @@ body {
 @media (max-width: 768px) {
   .game-layout {
     flex-direction: column;
-    height: auto;
-    min-height: 100vh;
+    height: 100vh;
   }
   .game-sidebar {
-    width: 100%;
-    height: auto;
-    max-height: 40vh;
+    width: 280px;
+    height: 100vh;
     position: relative;
-    border-right: none;
-    border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+    border-right: 1px solid rgba(201, 168, 76, 0.15);
+    border-bottom: none;
     padding: 16px;
+    overflow-y: auto;
   }
   .game-main {
-    height: auto;
+    height: 100vh;
     flex: 1;
-    min-height: 60vh;
+    min-height: 0;
+  }
+  .story-scroll-area {
+    padding: 16px 12px;
+  }
+  .game-bottom-bar-wrapper::before {
+    height: 40px;
   }
 }
 

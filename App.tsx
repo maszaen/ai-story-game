@@ -9,7 +9,7 @@ import { SavedGamesPage } from './components/SavedGamesPage';
 import { getNextScene } from './services/geminiService';
 import { putSave, generateSaveId, type SaveData } from './services/database';
 import { getSettings, saveSettings, type GameSettings } from './services/settings';
-import { IconBook, IconSwords } from './components/Icons';
+import { IconBook, IconSwords, IconScroll } from './components/Icons';
 import type { Scene, QuestItem } from './types';
 import type { Genre } from './constants';
 
@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const [gameOverMessage, setGameOverMessage] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const storyScrollRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Scroll story to top when scene changes
   useEffect(() => {
@@ -269,18 +270,52 @@ const App: React.FC = () => {
   // GAME VIEW
   return (
     <div className="game-layout page-enter" key="game">
-      <Sidebar
-        inventory={inventory}
-        quests={quests}
-        onBackToMenu={handleBackToMenu}
-        saveName={saveName}
-        turnCount={turnCount}
-        totalScenes={sceneHistory.length}
-        currentSceneIndex={currentSceneIndex}
-        onNavigateScene={handleNavigateScene}
-        isGameOver={isGameOver}
-      />
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — on mobile it's an overlay drawer */}
+      <div className={`
+        md:contents
+        fixed inset-y-0 left-0 z-50 md:relative md:z-auto
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <Sidebar
+          inventory={inventory}
+          quests={quests}
+          onBackToMenu={() => { setSidebarOpen(false); handleBackToMenu(); }}
+          saveName={saveName}
+          turnCount={turnCount}
+          totalScenes={sceneHistory.length}
+          currentSceneIndex={currentSceneIndex}
+          onNavigateScene={(idx) => { handleNavigateScene(idx); }}
+          isGameOver={isGameOver}
+        />
+      </div>
+
       <div className="game-main">
+        {/* Mobile top bar */}
+        <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 md:hidden border-b border-amber-900/20"
+          style={{ background: 'linear-gradient(180deg, rgba(15,10,5,0.98) 0%, rgba(10,7,3,0.95) 100%)' }}>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-amber-600 hover:text-amber-400 transition-colors p-1"
+          >
+            <IconScroll size={20} />
+          </button>
+          <span className="text-amber-700/60 text-xs truncate mx-2" style={{ fontFamily: "'Cinzel', serif", fontSize: '0.65rem' }}>
+            {saveName}
+          </span>
+          <span className="text-amber-800/50 text-xs flex-shrink-0" style={{ fontFamily: "'Cinzel', serif", fontSize: '0.6rem' }}>
+            {sceneHistory.length > 0 ? `${currentSceneIndex + 1}/${sceneHistory.length}` : ''}
+          </span>
+        </div>
+
         {/* Error banner */}
         {error && (
           <div className="flex-shrink-0 p-4">

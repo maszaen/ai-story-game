@@ -30,43 +30,50 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 relative overflow-hidden"
+    <div className="h-screen flex flex-col relative overflow-hidden"
       style={{ background: 'radial-gradient(ellipse at center, #1a0e05 0%, #0d0704 60%, #000 100%)' }}>
 
       {/* Decorative corners */}
-      <div className="absolute top-0 left-0 w-32 h-32 opacity-30"
-        style={{ borderTop: '3px solid #c9a84c', borderLeft: '3px solid #c9a84c', margin: '20px' }} />
-      <div className="absolute top-0 right-0 w-32 h-32 opacity-30"
-        style={{ borderTop: '3px solid #c9a84c', borderRight: '3px solid #c9a84c', margin: '20px' }} />
+      <div className="absolute top-0 left-0 w-16 h-16 md:w-32 md:h-32 opacity-30"
+        style={{ borderTop: '3px solid #c9a84c', borderLeft: '3px solid #c9a84c', margin: '10px' }} />
+      <div className="absolute top-0 right-0 w-16 h-16 md:w-32 md:h-32 opacity-30"
+        style={{ borderTop: '3px solid #c9a84c', borderRight: '3px solid #c9a84c', margin: '10px' }} />
 
-      {/* Back button */}
-      <div className="w-full max-w-xl z-10 mt-6 mb-4">
-        <button
-          onClick={onBack}
-          className="text-amber-600 hover:text-amber-400 transition-colors flex items-center gap-2"
-          style={{ fontFamily: "'Cinzel', serif", fontSize: '0.85rem' }}
-        >
-          ← Kembali
-        </button>
+      {/* Fixed header: back button + title */}
+      <div className="flex-shrink-0 flex flex-col items-center px-4 pt-4 relative z-10">
+        <div className="w-full max-w-xl mt-6 mb-4">
+          <button
+            onClick={onBack}
+            className="text-amber-600 hover:text-amber-400 transition-colors flex items-center gap-2"
+            style={{ fontFamily: "'Cinzel', serif", fontSize: '0.85rem' }}
+          >
+            ← Kembali
+          </button>
+        </div>
+
+        <div className="text-center mb-4">
+          <h1 className="text-3xl font-bold tracking-wider mb-2"
+            style={{
+              fontFamily: "'Cinzel Decorative', 'Cinzel', serif",
+              color: '#c9a84c',
+              textShadow: '0 0 30px rgba(201, 168, 76, 0.2)',
+            }}>
+            <IconGear size={28} style={{ display: 'inline-block', marginRight: '8px' }} /> Pengaturan
+          </h1>
+          <p className="text-amber-800/60 text-sm italic" style={{ fontFamily: "'Crimson Text', serif" }}>
+            Sesuaikan pengalaman petualanganmu
+          </p>
+        </div>
+
       </div>
 
-      {/* Title */}
-      <div className="text-center mb-8 z-10">
-        <h1 className="text-3xl font-bold tracking-wider mb-2"
-          style={{
-            fontFamily: "'Cinzel Decorative', 'Cinzel', serif",
-            color: '#c9a84c',
-            textShadow: '0 0 30px rgba(201, 168, 76, 0.2)',
-          }}>
-          <IconGear size={28} style={{ display: 'inline-block', marginRight: '8px' }} /> Pengaturan
-        </h1>
-        <p className="text-amber-800/60 text-sm italic" style={{ fontFamily: "'Crimson Text', serif" }}>
-          Sesuaikan pengalaman petualanganmu
-        </p>
-      </div>
-
-      {/* Settings cards */}
-      <div className="w-full max-w-xl z-10 space-y-4">
+      {/* Scrollable settings cards */}
+      <div className="flex-1 overflow-y-auto relative px-4 pb-8" style={{ scrollbarWidth: 'thin', scrollbarColor: '#c9a84c33 transparent' }}>
+        {/* Gradient fade overlay at top of scroll area */}
+        <div className="sticky top-0 left-0 right-0 h-8 pointer-events-none z-10 -mb-8" style={{
+          background: 'linear-gradient(to bottom, rgba(13,7,4,1) 0%, rgba(13,7,4,0) 100%)',
+        }} />
+        <div className="w-full max-w-xl mx-auto space-y-4 mt-8">
 
         {/* API Key — only show when no env var */}
         {!envKeyActive && (
@@ -198,10 +205,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
           </button>
         </SettingCard>
 
+        </div>
       </div>
 
-      {/* Footer spacing */}
-      <div className="h-20" />
     </div>
   );
 };
