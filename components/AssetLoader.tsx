@@ -22,15 +22,27 @@ export const AssetLoader: React.FC<AssetLoaderProps> = ({ progress, currentFile,
          <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-amber-700/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative text-center max-w-md w-full animate-pulse-slow">
-        <div className="mb-6 flex justify-center" style={{ color: '#c9a84c' }}>
+      <div className="relative text-center w-full max-w-2xl animate-pulse-slow px-4">
+        <h1 className="text-4xl md:text-6xl font-bold mb-2 tracking-widest text-[#c9a84c] drop-shadow-[0_0_15px_rgba(201,168,76,0.3)]" 
+            style={{ fontFamily: "'Cinzel Decorative', cursive" }}>
+          AI INFINITY
+        </h1>
+        <p className="text-amber-800/60 text-xs md:text-sm tracking-[0.4em] mb-10 uppercase font-serif">
+          Choose Your Own Path
+        </p>
+
+        {/* <div className="mb-8 flex justify-center transform scale-125" style={{ color: '#c9a84c' }}>
           <IconScroll size={48} />
-        </div>
+        </div> */}
         
-        <h2 className="text-xl md:text-2xl font-bold mb-2 tracking-widest text-[#c9a84c]" 
-            style={{ fontFamily: "'Cinzel', serif" }}>
-          {isComplete ? 'MEMASUKI GERBANG' : 'MEMPERSIAPKAN DUNIA'}
-        </h2>
+        {isComplete ? (
+          <></>
+        ) : (
+          <h2 className="text-2xl md:text-3xl font-bold mb-2 tracking-widest text-[#f0e6d2]" 
+              style={{ fontFamily: "'Cinzel', serif" }}>
+            MENYIAPKAN CERITA
+          </h2>
+        )}
         
         {!isComplete ? (
           <>
@@ -57,7 +69,7 @@ export const AssetLoader: React.FC<AssetLoaderProps> = ({ progress, currentFile,
           <div className="mt-8 animate-in fade-in zoom-in duration-500">
             <button
               onClick={onStart}
-              className="group relative px-8 py-3 bg-transparent overflow-hidden rounded-sm transition-all duration-300 transform hover:scale-105"
+              className="group relative px-10 py-4 bg-transparent overflow-hidden rounded-sm transition-all duration-300 transform"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-amber-900/0 via-amber-600/20 to-amber-900/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="absolute inset-0 border border-[#c9a84c]/30 group-hover:border-[#c9a84c] transition-colors duration-300" />

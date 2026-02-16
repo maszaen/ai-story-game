@@ -164,7 +164,12 @@ const PageTransition: React.FC<{ viewKey: string; children: React.ReactNode }> =
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<AppView>('home');
+  const [viewStack, setViewStack] = useState<AppView[]>(['home']);
+  const view = viewStack[viewStack.length - 1];
+
+  const pushView = useCallback((v: AppView) => setViewStack(prev => [...prev, v]), []);
+  const popView = useCallback(() => setViewStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev), []);
+  const resetView = useCallback((v: AppView = 'home') => setViewStack([v]), []);
   const [settings, setSettings] = useState<GameSettings>(getSettings);
   const [currentSaveId, setCurrentSaveId] = useState<string | null>(null);
   const [saveName, setSaveName] = useState('');
@@ -324,8 +329,8 @@ const App: React.FC = () => {
   }, []);
 
   const handleNewGame = useCallback(() => {
-    setView('genre-picker');
-  }, []);
+    pushView('genre-picker');
+  }, [pushView]);
 
   const handleSelectGenre = useCallback((genre: Genre) => {
     const id = generateSaveId();
@@ -349,8 +354,8 @@ const App: React.FC = () => {
     setError(null);
     setKnownCharacters([]);
     setConversationLogs({});
-    setView('game');
-  }, []);
+    pushView('game');
+  }, [pushView]);
 
   const handleLoadGame = useCallback((save: SaveData) => {
     setCurrentSaveId(save.id);
@@ -369,20 +374,20 @@ const App: React.FC = () => {
     setError(null);
     setKnownCharacters(save.knownCharacters || []);
     setConversationLogs(save.conversationLogs || {});
-    setView('game');
-  }, []);
+    pushView('game');
+  }, [pushView]);
 
   const handleBackToMenu = useCallback(() => {
-    setView('home');
-  }, []);
+    resetView('home');
+  }, [resetView]);
 
   const handleOpenSettings = useCallback(() => {
-    setView('settings');
-  }, []);
+    pushView('settings');
+  }, [pushView]);
 
   const handleOpenSavedGames = useCallback(() => {
-    setView('saved-games');
-  }, []);
+    pushView('saved-games');
+  }, [pushView]);
 
   const handleSettingsChange = useCallback((newSettings: GameSettings) => {
     setSettings(newSettings);
@@ -678,7 +683,7 @@ const App: React.FC = () => {
         <SettingsPage 
           settings={settings} 
           onChange={handleSettingsChange} 
-          onBack={() => setView('home')}
+          onBack={popView}
           musicVolume={musicVolume}
           onVolumeChange={setMusicVolume}
         />
@@ -690,7 +695,7 @@ const App: React.FC = () => {
   if (view === 'saved-games') {
     return (
       <PageTransition viewKey="saved-games">
-        <SavedGamesPage onLoadGame={handleLoadGame} onBack={() => setView('home')} />
+        <SavedGamesPage onLoadGame={handleLoadGame} onBack={popView} />
       </PageTransition>
     );
   }
@@ -699,7 +704,7 @@ const App: React.FC = () => {
   if (view === 'genre-picker') {
     return (
       <PageTransition viewKey="genre-picker">
-        <GenrePicker onSelectGenre={handleSelectGenre} onBack={() => setView('home')} />
+        <GenrePicker onSelectGenre={handleSelectGenre} onBack={popView} />
       </PageTransition>
     );
   }

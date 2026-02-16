@@ -211,7 +211,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
               value={Math.round(musicVolume * 100)}
               onChange={e => onVolumeChange(Number(e.target.value) / 100)}
               className="volume-slider flex-1"
-              style={{ accentColor: '#c9a84c' }}
+              style={{
+                background: `linear-gradient(to right, #c9a84c 0%, #c9a84c ${Math.round(musicVolume * 100)}%, #2d1b0a ${Math.round(musicVolume * 100)}%, #2d1b0a 100%)`
+              }}
             />
             <span style={{
               fontFamily: "'Cinzel', serif",
