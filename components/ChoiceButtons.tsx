@@ -16,6 +16,8 @@ interface ChoiceButtonsProps {
   onStartOptionalTalk?: (character: VoiceChatConfig) => void;
   /** Accumulated conversation messages per character */
   conversationLogs?: Record<string, ChatMessage[]>;
+  /** Ref to the story scroll container for auto-collapse logic */
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -75,10 +77,18 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
   choices, onChoice, isLoading, isGameOver, onBackToMenu,
   voiceChat, onStartVoiceChat,
   talkableCharacters, onStartOptionalTalk, conversationLogs,
+  scrollContainerRef,
 }) => {
   // Track which choice was clicked for exit animation
   const [exitingChoice, setExitingChoice] = useState<number | null>(null);
   const [showContent, setShowContent] = useState(true);
+
+  // Collapse/expand state
+  const [collapsed, setCollapsed] = useState(true);
+  // Auto-collapse arming: becomes true once user has scrolled to bottom after expanding from above
+  const autoCollapseArmedRef = useRef(false);
+  // Track if user was at bottom when they expanded
+  const wasAtBottomOnExpandRef = useRef(false);
 
   const handleChoiceClick = (choice: string, index: number) => {
     setExitingChoice(index);
@@ -96,6 +106,80 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
       setShowContent(true);
     }
   }, [isLoading, choices.length]);
+
+  // Auto-collapse on scene change (choices array reference changes)
+  const prevChoicesRef = useRef(choices);
+  useEffect(() => {
+    if (choices !== prevChoicesRef.current) {
+      setCollapsed(true);
+      autoCollapseArmedRef.current = false;
+      wasAtBottomOnExpandRef.current = false;
+      prevChoicesRef.current = choices;
+    }
+  }, [choices]);
+
+  // Determine if scroll is near bottom
+  const isNearBottom = useCallback((el: HTMLElement, offset = 50) => {
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= offset;
+  }, []);
+
+  // Handle expand click
+  const handleExpand = useCallback(() => {
+    setCollapsed(false);
+
+    const el = scrollContainerRef?.current;
+    if (el) {
+      const atBottom = isNearBottom(el);
+      wasAtBottomOnExpandRef.current = atBottom;
+      if (atBottom) {
+        // Case 1: user is at bottom — auto-collapse is immediately armed
+        autoCollapseArmedRef.current = true;
+      } else {
+        // Case 2: user is above — arm only after they reach bottom
+        autoCollapseArmedRef.current = false;
+      }
+    }
+  }, [scrollContainerRef, isNearBottom]);
+
+  // Scroll listener for auto-collapse
+  useEffect(() => {
+    if (collapsed) return;
+    const el = scrollContainerRef?.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const scrollTop = el.scrollTop;
+      const scrollHeight = el.scrollHeight;
+      const clientHeight = el.clientHeight;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const threshold30 = clientHeight * 0.3;
+
+      if (wasAtBottomOnExpandRef.current) {
+        // Case 1: expanded from bottom — collapse when scrolling 30% up
+        if (autoCollapseArmedRef.current && distanceFromBottom > threshold30) {
+          setCollapsed(true);
+          autoCollapseArmedRef.current = false;
+        }
+      } else {
+        // Case 2: expanded from above
+        if (!autoCollapseArmedRef.current) {
+          // Not yet armed — watch for reaching bottom
+          if (distanceFromBottom <= 50) {
+            autoCollapseArmedRef.current = true;
+          }
+        } else {
+          // Armed — collapse when scrolling 30% up from bottom
+          if (distanceFromBottom > threshold30) {
+            setCollapsed(true);
+            autoCollapseArmedRef.current = false;
+          }
+        }
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [collapsed, scrollContainerRef]);
 
   if (isGameOver) {
     return (
@@ -124,7 +208,7 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
     );
   }
 
-  // Voice Chat mode — show mic button instead of choices
+  // Voice Chat mode — show mic button instead of choices (no collapse for mandatory)
   if (voiceChat && !isLoading && exitingChoice === null) {
     return (
       <AnimatedHeight>
@@ -193,6 +277,9 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
   // Count how many characters have been talked to
   const chatCount = conversationLogs ? Object.keys(conversationLogs).length : 0;
 
+  // Determine if we should show the collapse button (only for non-loading, non-gameover, with actual choices)
+  const canCollapse = !isLoading && exitingChoice === null && showContent && choices.length > 0 && !voiceChat;
+
   return (
     <AnimatedHeight>
       <div className="flex-shrink-0 p-4">
@@ -224,141 +311,174 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
               </span>
             </div>
           ) : showContent && choices.length > 0 ? (
-            <div className="space-y-3">
-              {/* Optional talk buttons — shown above choices when talkable NPCs exist */}
-              {hasTalkableChars && (
-                <div className="optional-talk-section">
-                  <p
+            <>
+              {/* Collapsed: single expand button */}
+              {canCollapse && collapsed ? (
+                <button
+                  onClick={handleExpand}
+                  className="choice-collapse-btn w-full rounded-lg choice-enter"
+                >
+                  <span className="choice-collapse-label" style={{ color: '#c9a84c' }}>Pilih aksi selanjutnya</span>
+                  <span className="choice-collapse-chevron" style={{ color: '#c9a84c' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                  </span>
+                </button>
+              ) : (
+                /* Expanded: full choices */
+                <div className={`space-y-3 ${!collapsed ? 'choices-expand-enter' : ''}`}>
+                  {/* Collapse button */}
+                  {canCollapse && (
+                    <button
+                      onClick={() => { setCollapsed(true); autoCollapseArmedRef.current = false; }}
+                      className="choice-collapse-btn choice-collapse-btn--active w-full rounded-lg"
+                    >
+                      <span className="choice-collapse-label" style={{ color: '#c9a84c' }}>Sembunyikan pilihan</span>
+                      <span className="choice-collapse-chevron choice-collapse-chevron--open" style={{ color: '#c9a84c' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="18 15 12 9 6 15" />
+                        </svg>
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Optional talk buttons — shown above choices when talkable NPCs exist */}
+                  {hasTalkableChars && (
+                    <div className="optional-talk-section">
+                      {/* <p
+                        className="text-center mb-2"
+                        style={{
+                          fontFamily: "'Cinzel', serif",
+                          color: "rgba(201,168,76,0.5)",
+                          fontSize: "0.65rem",
+                          letterSpacing: "0.2em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Ajak Bicara
+                      </p> */}
+                      <div className="optional-talk-buttons">
+                        {talkableCharacters!.map((char, idx) => {
+                          const hasPreviousChat = conversationLogs && conversationLogs[char.characterName];
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => onStartOptionalTalk?.(char)}
+                              className="optional-talk-btn"
+                              title={char.characterRole}
+                            >
+                              <div className="optional-talk-avatar">
+                                {char.characterName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="optional-talk-info">
+                                <span className="optional-talk-name">{char.characterName}</span>
+                                <span className="optional-talk-role">{char.characterRole}</span>
+                              </div>
+                              <div className="optional-talk-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8h-1a6 6 0 11-12 0H3a7.001 7.001 0 006 6.93V17H7v1h6v-1h-2v-2.07z" clipRule="evenodd" />
+                                </svg>
+                                {hasPreviousChat && (
+                                  <span className="optional-talk-badge" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {chatCount > 0 && (
+                        <p
+                          className="text-center mt-2"
+                          style={{
+                            fontFamily: "'Crimson Text', serif",
+                            color: "rgba(201,168,76,0.35)",
+                            fontSize: "0.7rem",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          {chatCount} percakapan tercatat — bisa dilanjutkan atau pilih jalanmu
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Divider between talk buttons and choices */}
+                  {hasTalkableChars && (
+                    <div className="optional-talk-divider">
+                      <span>atau</span>
+                    </div>
+                  )}
+
+                  {/* <p
                     className="text-center mb-2"
                     style={{
                       fontFamily: "'Cinzel', serif",
                       color: "rgba(201,168,76,0.5)",
-                      fontSize: "0.65rem",
+                      fontSize: "0.7rem",
                       letterSpacing: "0.2em",
                       textTransform: "uppercase",
                     }}
                   >
-                    Ajak Bicara
-                  </p>
-                  <div className="optional-talk-buttons">
-                    {talkableCharacters!.map((char, idx) => {
-                      const hasPreviousChat = conversationLogs && conversationLogs[char.characterName];
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => onStartOptionalTalk?.(char)}
-                          className="optional-talk-btn"
-                          title={char.characterRole}
+                    Pilih jalanmu
+                  </p> */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {choices.map((choice, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleChoiceClick(choice.text, index)}
+                        disabled={isLoading || exitingChoice !== null}
+                        className={`btn-choice rounded-lg choice-enter flex items-start text-left ${
+                          exitingChoice !== null && exitingChoice !== index
+                            ? "choice-exit-fade"
+                            : ""
+                        } ${exitingChoice === index ? "choice-exit-selected" : ""}`}
+                      >
+                        <span
+                          className="mr-2 mt-1 shrink-0"
+                          style={{
+                            color: "#c9a84c",
+                            fontFamily: "'Cinzel', serif",
+                            fontSize: "0.7rem",
+                          }}
                         >
-                          <div className="optional-talk-avatar">
-                            {char.characterName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="optional-talk-info">
-                            <span className="optional-talk-name">{char.characterName}</span>
-                            <span className="optional-talk-role">{char.characterRole}</span>
-                          </div>
-                          <div className="optional-talk-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8h-1a6 6 0 11-12 0H3a7.001 7.001 0 006 6.93V17H7v1h6v-1h-2v-2.07z" clipRule="evenodd" />
-                            </svg>
-                            {hasPreviousChat && (
-                              <span className="optional-talk-badge" />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+                          {["I", "II", "III"][index] || index + 1}.
+                        </span>
+                        <span>{choice.text}</span>
+                      </button>
+                    ))}
                   </div>
+
+                  {/* 4th option: continue based on conversation plans — only when there are conversation logs */}
                   {chatCount > 0 && (
-                    <p
-                      className="text-center mt-2"
-                      style={{
-                        fontFamily: "'Crimson Text', serif",
-                        color: "rgba(201,168,76,0.35)",
-                        fontSize: "0.7rem",
-                        fontStyle: "italic",
-                      }}
+                    <button
+                      onClick={() => handleChoiceClick(
+                        "[Lanjutkan cerita sesuai percakapan dan rencana yang telah dibicarakan dengan karakter-karakter di atas]",
+                        choices.length
+                      )}
+                      disabled={isLoading || exitingChoice !== null}
+                      className={`btn-choice btn-choice-conversation rounded-lg choice-enter flex items-start text-left w-full ${
+                        exitingChoice !== null && exitingChoice !== choices.length
+                          ? "choice-exit-fade"
+                          : ""
+                      } ${exitingChoice === choices.length ? "choice-exit-selected" : ""}`}
                     >
-                      {chatCount} percakapan tercatat — bisa dilanjutkan atau pilih jalanmu
-                    </p>
+                      <span
+                        className="mr-2 mt-1 shrink-0"
+                        style={{
+                          color: "#c9a84c",
+                          fontFamily: "'Cinzel', serif",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        IV.
+                      </span>
+                      <span>Lanjut sesuai percakapan dan rencana yang telah dibicarakan</span>
+                    </button>
                   )}
                 </div>
               )}
-
-              {/* Divider between talk buttons and choices */}
-              {hasTalkableChars && (
-                <div className="optional-talk-divider">
-                  <span>atau</span>
-                </div>
-              )}
-
-              <p
-                className="text-center mb-2"
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  color: "rgba(201,168,76,0.5)",
-                  fontSize: "0.7rem",
-                  letterSpacing: "0.2em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Pilih jalanmu
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {choices.map((choice, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleChoiceClick(choice.text, index)}
-                    disabled={isLoading || exitingChoice !== null}
-                    className={`btn-choice rounded-lg choice-enter flex items-start text-left ${
-                      exitingChoice !== null && exitingChoice !== index
-                        ? "choice-exit-fade"
-                        : ""
-                    } ${exitingChoice === index ? "choice-exit-selected" : ""}`}
-                  >
-                    <span
-                      className="mr-2 mt-1 shrink-0"
-                      style={{
-                        color: "#c9a84c",
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: "0.7rem",
-                      }}
-                    >
-                      {["I", "II", "III"][index] || index + 1}.
-                    </span>
-                    <span>{choice.text}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* 4th option: continue based on conversation plans — only when there are conversation logs */}
-              {chatCount > 0 && (
-                <button
-                  onClick={() => handleChoiceClick(
-                    "[Lanjutkan cerita sesuai percakapan dan rencana yang telah dibicarakan dengan karakter-karakter di atas]",
-                    choices.length
-                  )}
-                  disabled={isLoading || exitingChoice !== null}
-                  className={`btn-choice btn-choice-conversation rounded-lg choice-enter flex items-start text-left w-full ${
-                    exitingChoice !== null && exitingChoice !== choices.length
-                      ? "choice-exit-fade"
-                      : ""
-                  } ${exitingChoice === choices.length ? "choice-exit-selected" : ""}`}
-                >
-                  <span
-                    className="mr-2 mt-1 shrink-0"
-                    style={{
-                      color: "#c9a84c",
-                      fontFamily: "'Cinzel', serif",
-                      fontSize: "0.7rem",
-                    }}
-                  >
-                    IV.
-                  </span>
-                  <span>Lanjut sesuai percakapan dan rencana yang telah dibicarakan</span>
-                </button>
-              )}
-            </div>
+            </>
           ) : null}
         </div>
       </div>

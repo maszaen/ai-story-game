@@ -10,6 +10,8 @@ import { SavedGamesPage } from './components/SavedGamesPage';
 import { getNextScene } from './services/geminiService';
 import { putSave, generateSaveId, type SaveData } from './services/database';
 import { getSettings, saveSettings, type GameSettings } from './services/settings';
+import { audioManager, type BacksoundId } from './services/audioManager';
+import { AssetLoader } from './components/AssetLoader';
 import { IconBook, IconSwords, IconScroll } from './components/Icons';
 import type { Scene, QuestItem, VoiceChatConfig, ChatMessage, CharacterPortrait } from './types';
 import type { Genre } from './constants';
@@ -197,6 +199,66 @@ const App: React.FC = () => {
   const [conversationLogs, setConversationLogs] = useState<Record<string, ChatMessage[]>>({});
   /** Known characters with generated portraits for visual consistency */
   const [knownCharacters, setKnownCharacters] = useState<CharacterPortrait[]>([]);
+  /** Music volume (0-1), default 50% */
+  const [musicVolume, setMusicVolume] = useState(0.2);
+
+  // Asset Loading State
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [currentFile, setCurrentFile] = useState('');
+
+  // Initial Asset Load
+  useEffect(() => {
+    const initAudio = async () => {
+      await audioManager.init((progress, file) => {
+         setLoadProgress(progress);
+         setCurrentFile(file);
+      });
+      // Do not auto-set assetsLoaded. Wait for user interaction.
+      setLoadProgress(100); 
+    };
+    initAudio();
+  }, []);
+
+  const handleEnterWorld = useCallback(() => {
+    audioManager.resumeContext();
+    setAssetsLoaded(true);
+  }, []);
+
+  // Play homescreen music on non-game views (ONLY after assets loaded)
+  useEffect(() => {
+    if (assetsLoaded && view !== 'game') {
+      audioManager.play('homescreen');
+    }
+  }, [view, assetsLoaded]);
+
+  // Play scene backsound when scene changes
+  useEffect(() => {
+    if (view !== 'game' || !gameStarted) return;
+    const scene = currentSceneIndex >= 0 && currentSceneIndex < sceneHistory.length
+      ? sceneHistory[currentSceneIndex]
+      : null;
+    if (scene?.backsound) {
+      audioManager.play(scene.backsound as BacksoundId);
+    }
+  }, [view, gameStarted, currentSceneIndex, sceneHistory, assetsLoaded]); // Added assetsLoaded dependecy just in case
+
+  // Play generating music during loading (initial or between scenes)
+  useEffect(() => {
+    if (isLoading) {
+      audioManager.play('generating-story');
+    }
+  }, [isLoading]);
+
+  // Sync volume
+  useEffect(() => {
+    audioManager.setVolume(musicVolume);
+  }, [musicVolume]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => audioManager.stop();
+  }, []);
 
   // Scroll story to top when scene changes
   useEffect(() => {
@@ -522,7 +584,12 @@ const App: React.FC = () => {
     return `${sceneSummaries}${inventoryText}${questText}`;
   }, [sceneHistory, inventory, quests]);
 
-  // HOME VIEW
+  // 1. ASSET LOADER (First View)
+  if (!assetsLoaded) {
+    return <AssetLoader progress={loadProgress} currentFile={currentFile} onStart={handleEnterWorld} />;
+  }
+
+  // 2. HOME VIEW
   if (view === 'home') {
     return (
       <PageTransition viewKey="home">
@@ -535,7 +602,13 @@ const App: React.FC = () => {
   if (view === 'settings') {
     return (
       <PageTransition viewKey="settings">
-        <SettingsPage settings={settings} onChange={handleSettingsChange} onBack={() => setView('home')} />
+        <SettingsPage 
+          settings={settings} 
+          onChange={handleSettingsChange} 
+          onBack={() => setView('home')}
+          musicVolume={musicVolume}
+          onVolumeChange={setMusicVolume}
+        />
       </PageTransition>
     );
   }
@@ -611,30 +684,44 @@ const App: React.FC = () => {
 
         {/* Error banner */}
         {error && (
-          <div className="flex-shrink-0 p-4">
-            <div className="w-full max-w-4xl mx-auto p-4 rounded-lg" style={{
-              background: 'linear-gradient(180deg, rgba(40,18,12,0.85) 0%, rgba(25,10,8,0.9) 100%)',
-              border: '1px solid rgba(160,100,60,0.35)',
-              boxShadow: '0 0 20px rgba(160,100,60,0.08), inset 0 1px 0 rgba(201,168,76,0.05)',
-            }}>
-              <p style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: '0.8rem',
-                color: 'rgba(201,140,80,0.7)',
-                marginBottom: '4px',
-                letterSpacing: '0.05em',
+          <div className="flex-shrink-0 relative">
+            <div className="px-4 pt-4">
+              <div className="w-full max-w-4xl mx-auto p-4 rounded-lg" style={{
+                background: 'linear-gradient(180deg, rgba(40,18,12,0.85) 0%, rgba(25,10,8,0.9) 100%)',
+                border: '1px solid rgba(160,100,60,0.35)',
+                boxShadow: '0 0 20px rgba(160,100,60,0.08), inset 0 1px 0 rgba(201,168,76,0.05)',
               }}>
-                Terjadi Kesalahan
-              </p>
-              <p style={{
-                fontFamily: "'Crimson Text', serif",
-                fontSize: '0.9rem',
-                color: 'rgba(200,160,120,0.7)',
-                lineHeight: 1.5,
-              }}>
-                {error}
-              </p>
+                <p style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.8rem',
+                  color: '#c9a84c',
+                  marginBottom: '4px',
+                  letterSpacing: '0.05em',
+                }}>
+                  Terjadi Kesalahan
+                </p>
+                <p style={{
+                  fontFamily: "'Crimson Text', serif",
+                  fontSize: '0.9rem',
+                  color: 'rgba(200,160,120,0.7)',
+                  lineHeight: 1.5,
+                }}>
+                  {error}
+                </p>
+              </div>
             </div>
+            {/* Gradient fade below error banner */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              height: '60px',
+              background: 'linear-gradient(to bottom, rgba(10, 7, 3, 0.95) 0%, rgba(10, 7, 3, 0) 100%)',
+              pointerEvents: 'none',
+              zIndex: 9999999,
+              transform: 'translateY(100%)',
+            }} />
           </div>
         )}
 
@@ -725,6 +812,7 @@ const App: React.FC = () => {
                     talkableCharacters={currentScene?.talkableCharacters}
                     onStartOptionalTalk={handleStartOptionalTalk}
                     conversationLogs={conversationLogs}
+                    scrollContainerRef={storyScrollRef}
                   />
                 </div>
               </div>

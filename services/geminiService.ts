@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { Scene, GameStateUpdate, QuestItem, CharacterPortrait } from '../types';
 import { getArtStylePrompt, type GameSettings } from './settings';
 import { getApiKey } from './apiKey';
+import { BACKSOUND_DESCRIPTIONS } from './audioManager';
 
 const getAi = () => {
   const key = getApiKey();
@@ -195,8 +196,12 @@ const storyResponseSchema = {
       type: Type.STRING,
       description: "Name of a character to highlight/feature in the sidebar character gallery. Use this when a character becomes particularly important in the current scene — e.g. a dramatic reveal, first meeting with a key NPC, or an emotional moment with a companion. This moves that character to the front of the gallery display. Set to empty string '' when no particular character should be highlighted.",
     },
+    backsound: {
+      type: Type.STRING,
+      description: `Choose a background music track that fits the MOOD and ATMOSPHERE of this scene. Available options: ${Object.entries(BACKSOUND_DESCRIPTIONS).filter(([k]) => k !== 'homescreen' && k !== 'generating-story').map(([k, v]) => `'${k}' = ${v}`).join(' | ')} | 'none' = no music (for very quiet, tense silence moments, or when the scene doesn't need music). Pick the track that BEST matches the emotional tone of the scene. You can also use 'none' for scenes where silence is more impactful.`,
+    },
   },
-  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters', 'newCharacters', 'sceneCharacterNames', 'highlightCharacter'],
+  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters', 'newCharacters', 'sceneCharacterNames', 'highlightCharacter', 'backsound'],
 };
 
 export const getNextScene = async (
@@ -520,6 +525,7 @@ Balas hanya dengan objek JSON yang diminta.`,
     talkableCharacters: talkableCharacters.length > 0 ? talkableCharacters : undefined,
     sceneCharacterNames: sceneCharNames.length > 0 ? sceneCharNames : undefined,
     highlightCharacter: gameStateUpdate.highlightCharacter || undefined,
+    backsound: gameStateUpdate.backsound || undefined,
   };
 
   const newHistory = [...currentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];

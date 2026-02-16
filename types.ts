@@ -86,6 +86,8 @@ export interface GameStateUpdate {
   sceneCharacterNames: string[];
   /** Optional: character name to highlight/move to front in the sidebar gallery */
   highlightCharacter: string;
+  /** Backsound track for this scene — AI picks based on mood. Can be 'none' for silence. */
+  backsound: string;
 }
 
 export interface Scene {
@@ -105,4 +107,6 @@ export interface Scene {
   sceneCharacterNames?: string[];
   /** Character to highlight in sidebar gallery */
   highlightCharacter?: string;
+  /** Backsound track for this scene */
+  backsound?: string;
 }
