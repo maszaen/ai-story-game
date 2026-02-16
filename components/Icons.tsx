@@ -89,6 +89,19 @@ export const IconShield = (props: IconProps) => svg(
   props
 );
 
+/** People group */
+export const IconPeopleGroup = (props: IconProps) => svgFill(
+  <>
+    <circle cx="12" cy="5" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M8 21v-2a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <circle cx="5" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M2 21v-1.5a3 3 0 0 1 4.5-2.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    <circle cx="19" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M22 21v-1.5a3 3 0 0 0-4.5-2.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </>,
+  props
+);
+
 /** Sword (single) */
 export const IconSword = (props: IconProps) => svg(
   'M14.5 17.5L3 6V3h3l11.5 11.5 M13 19l6-6 M19 13l2-2-6-6-2 2 M14.5 17.5L3 6',

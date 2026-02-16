@@ -1,6 +1,6 @@
-import React from 'react';
-import type { QuestItem } from '../types';
-import { IconSkull, IconBook, IconScroll, IconSword, IconCheck, IconDiamond, IconChevronLeft, IconChevronRight } from './Icons';
+import React, { useState, useMemo } from 'react';
+import type { QuestItem, CharacterPortrait } from '../types';
+import { IconSkull, IconBook, IconScroll, IconSword, IconCheck, IconDiamond, IconChevronLeft, IconChevronRight, IconPeopleGroup } from './Icons';
 
 interface SidebarProps {
   inventory: string[];
@@ -13,13 +13,38 @@ interface SidebarProps {
   currentSceneIndex: number;
   onNavigateScene: (index: number) => void;
   isGameOver: boolean;
+  knownCharacters: CharacterPortrait[];
+  highlightCharacter?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   inventory, quests, onBackToMenu, saveName, turnCount,
   totalScenes, currentSceneIndex, onNavigateScene, isGameOver,
+  knownCharacters, highlightCharacter,
 }) => {
   const isViewingHistory = currentSceneIndex < totalScenes - 1;
+  const [showAllCharacters, setShowAllCharacters] = useState(false);
+
+  // Order characters: highlighted first, then main character, then others
+  const orderedCharacters = useMemo(() => {
+    if (knownCharacters.length === 0) return [];
+    const sorted = [...knownCharacters];
+    sorted.sort((a, b) => {
+      // Highlighted character goes first
+      if (highlightCharacter) {
+        if (a.name === highlightCharacter && b.name !== highlightCharacter) return -1;
+        if (b.name === highlightCharacter && a.name !== highlightCharacter) return 1;
+      }
+      // Main character next
+      if (a.isMainCharacter && !b.isMainCharacter) return -1;
+      if (b.isMainCharacter && !a.isMainCharacter) return 1;
+      return 0;
+    });
+    return sorted;
+  }, [knownCharacters, highlightCharacter]);
+
+  const visibleCharacters = orderedCharacters.slice(0, 4);
+  const hasMore = orderedCharacters.length > 4;
 
   return (
     <aside className="game-sidebar">
@@ -113,6 +138,96 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="ornate-divider flex-shrink-0">
         <span style={{ color: 'rgba(201,168,76,0.4)', fontSize: '10px' }}>✦</span>
       </div>
+
+      {/* Known Characters Gallery */}
+      {orderedCharacters.length > 0 && (
+        <>
+          <div className="flex-shrink-0">
+            <h2 className="heading-medieval text-sm mb-3 flex items-center gap-2" style={{ fontSize: '0.75rem' }}>
+              <span style={{ fontSize: '14px' }}><IconPeopleGroup size={14} /></span>
+              Karakter yang Dikenal
+            </h2>
+            <div className="char-gallery-grid">
+              {visibleCharacters.map((char) => (
+                <div
+                  key={char.id}
+                  className={`char-portrait-cell${char.name === highlightCharacter ? ' char-highlighted' : ''}${char.isMainCharacter ? ' char-main' : ''}`}
+                  title={`${char.name}\n${char.role}`}
+                >
+                  {char.portraitBase64 ? (
+                    <img
+                      src={`data:image/png;base64,${char.portraitBase64}`}
+                      alt={char.name}
+                      className="char-portrait-img"
+                    />
+                  ) : (
+                    <div className="char-portrait-placeholder">?</div>
+                  )}
+                  <div className="char-portrait-name">{char.name}</div>
+                  {char.isMainCharacter && (
+                    <div className="char-badge-main" title="Karakter Utama">★</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                onClick={() => setShowAllCharacters(true)}
+                className="char-see-more-btn"
+              >
+                Selengkapnya ({orderedCharacters.length - 4} lagi)
+              </button>
+            )}
+          </div>
+
+          <div className="ornate-divider flex-shrink-0">
+            <span style={{ color: 'rgba(201,168,76,0.4)', fontSize: '10px' }}>✦</span>
+          </div>
+        </>
+      )}
+
+      {/* Full Character Overlay */}
+      {showAllCharacters && (
+        <div className="char-overlay-backdrop" onClick={() => setShowAllCharacters(false)}>
+          <div className="char-overlay-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="char-overlay-header">
+              <h2 className="heading-medieval" style={{ fontSize: '0.9rem', margin: 0, color: '#c9a84c' }}>
+                Karakter yang Dikenal
+              </h2>
+              <button
+                onClick={() => setShowAllCharacters(false)}
+                className="char-overlay-close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="char-overlay-list">
+              {orderedCharacters.map((char) => (
+                <div key={char.id} className="char-overlay-item">
+                  <div className="char-overlay-portrait">
+                    {char.portraitBase64 ? (
+                      <img
+                        src={`data:image/png;base64,${char.portraitBase64}`}
+                        alt={char.name}
+                        className="char-portrait-img"
+                      />
+                    ) : (
+                      <div className="char-portrait-placeholder">?</div>
+                    )}
+                  </div>
+                  <div className="char-overlay-info">
+                    <div className="char-overlay-name">
+                      {char.name}
+                      {char.isMainCharacter && <span className="char-badge-inline">★ Utama</span>}
+                    </div>
+                    <div className="char-overlay-role">{char.role}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quests */}
       <div className="flex-shrink-0">

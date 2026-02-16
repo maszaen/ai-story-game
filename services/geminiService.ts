@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Scene, GameStateUpdate, QuestItem } from '../types';
+import type { Scene, GameStateUpdate, QuestItem, CharacterPortrait } from '../types';
 import { getArtStylePrompt, type GameSettings } from './settings';
 import { getApiKey } from './apiKey';
 
@@ -160,8 +160,43 @@ const storyResponseSchema = {
         required: ['characterName', 'characterRole', 'voiceName', 'initialDialogue', 'systemInstruction'],
       },
     },
+    newCharacters: {
+      type: Type.ARRAY,
+      description: "Array of NEW important characters introduced in this scene that do NOT yet have a portrait. Check the list of known character names provided in the system prompt — only include characters whose names are NOT in that list. For each new character, provide a DETAILED visual description for portrait generation. Include the MAIN CHARACTER in the FIRST scene (scene 1). For NPCs, include them when they are narratively important (recurring allies, antagonists, quest-givers, companions) — do NOT include random background NPCs or one-time extras. If no new important characters appear, return an empty array [].",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            description: "The character's name. Must match exactly how they are referred to in the story.",
+          },
+          role: {
+            type: Type.STRING,
+            description: "Brief role description in Indonesian. E.g. 'Karakter utama', 'Penjaga perpustakaan', 'Teman seperjalanan'.",
+          },
+          visualDescription: {
+            type: Type.STRING,
+            description: "EXTREMELY DETAILED visual appearance description for portrait generation. Write in English. Must include ALL of: (1) Age & gender, (2) Face shape & features (eye shape, nose, jawline, cheekbones), (3) Eye color & expression, (4) Hair color, style, length, texture, (5) Skin tone & complexion, (6) Clothing/armor with SPECIFIC colors and materials, (7) Accessories & jewelry, (8) Distinguishing features (scars, tattoos, birthmarks, etc.), (9) Build/physique, (10) Overall vibe/aura. Minimum 4-5 sentences. Example: 'Young woman early 20s, oval face with high cheekbones and a pointed chin. Large almond-shaped emerald green eyes with long dark lashes. Waist-length wavy auburn-red hair, often partially braided at the temples. Fair skin with light freckles across nose and cheeks. Wearing a deep forest-green hooded cloak over a fitted dark brown leather corset and cream linen blouse, brown leather bracers on both forearms. Silver crescent-moon pendant necklace. Slim athletic build. Confident, determined expression.'",
+          },
+          isMainCharacter: {
+            type: Type.BOOLEAN,
+            description: "True ONLY for the player's main character (protagonist). False for all NPCs.",
+          },
+        },
+        required: ['name', 'role', 'visualDescription', 'isMainCharacter'],
+      },
+    },
+    sceneCharacterNames: {
+      type: Type.ARRAY,
+      description: "Names of ALL known/important characters who VISUALLY APPEAR in this scene's images. Include both existing known characters AND any new characters from newCharacters. These names are used to attach reference portrait images when generating scene images for visual consistency. Only include characters who are VISIBLE in the scene — not mentioned-only characters.",
+      items: { type: Type.STRING },
+    },
+    highlightCharacter: {
+      type: Type.STRING,
+      description: "Name of a character to highlight/feature in the sidebar character gallery. Use this when a character becomes particularly important in the current scene — e.g. a dramatic reveal, first meeting with a key NPC, or an emotional moment with a companion. This moves that character to the front of the gallery display. Set to empty string '' when no particular character should be highlighted.",
+    },
   },
-  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters'],
+  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters', 'newCharacters', 'sceneCharacterNames', 'highlightCharacter'],
 };
 
 export const getNextScene = async (
@@ -171,7 +206,8 @@ export const getNextScene = async (
   previousVisualIdentity?: {
     characterVisualIdentity: string;
     locationVisualIdentity: string;
-  }
+  },
+  knownCharacters: CharacterPortrait[] = [],
 ): Promise<{
   scene: Scene;
   newInventory: string[];
@@ -180,6 +216,7 @@ export const getNextScene = async (
   newHistory: { role: string; parts: { text: string }[] }[];
   characterVisualIdentity: string;
   locationVisualIdentity: string;
+  newCharacterPortraits: CharacterPortrait[];
 }> => {
   const ai = getAi();
 
@@ -193,6 +230,13 @@ export const getNextScene = async (
     ? `\n\nKONTEKS VISUAL SEBELUMNYA (gunakan sebagai referensi, update jika ada perubahan):
 - Penampilan karakter: ${previousVisualIdentity.characterVisualIdentity}
 - Lokasi terakhir: ${previousVisualIdentity.locationVisualIdentity}`
+    : '';
+
+  // Build known characters context for the system prompt
+  const knownCharacterNames = knownCharacters.map(c => c.name);
+  const knownCharactersContext = knownCharacters.length > 0
+    ? `\n\nKARAKTER YANG SUDAH DIKENAL (sudah punya portrait, JANGAN masukkan ke newCharacters):
+${knownCharacters.map(c => `- ${c.name} (${c.role})${c.isMainCharacter ? ' [KARAKTER UTAMA]' : ''}: ${c.visualDescription}`).join('\n')}`
     : '';
 
   // 1. Generate the story
@@ -285,6 +329,15 @@ MENANGANI INPUT DISKUSI SUARA:
 - Gunakan keputusan/rencana yang dibuat dalam diskusi untuk menentukan arah cerita selanjutnya.
 - Referensikan percakapan yang terjadi di narasi (misal: 'Setelah berdiskusi panjang dengan Eliot, mereka memutuskan untuk...').
 
+SISTEM KARAKTER & PORTRAIT (SANGAT PENTING):
+- Setiap karakter penting akan di-generate portrait-nya untuk konsistensi visual.
+- Di SCENE PERTAMA: WAJIB masukkan karakter utama ke newCharacters dengan isMainCharacter=true dan visualDescription yang super detail.
+- Untuk NPC penting (teman seperjalanan, antagonis, quest-giver, karakter berulang): masukkan ke newCharacters saat pertama kali muncul.
+- JANGAN masukkan NPC random / latar belakang / sekali muncul ke newCharacters.
+- Cek daftar "KARAKTER YANG SUDAH DIKENAL" di bawah — karakter yang sudah ada di daftar itu JANGAN dimasukkan lagi ke newCharacters.
+- sceneCharacterNames: isi dengan SEMUA nama karakter penting yang TERLIHAT di scene ini (baik yang sudah dikenal maupun yang baru).
+- highlightCharacter: isi dengan nama karakter yang paling menonjol/penting di scene ini. Kosongkan '' jika tidak ada yang perlu di-highlight.${knownCharactersContext}
+
 Pastikan ceritanya koheren, pilihan bermakna, dan dunia game diperbarui secara logis.
 
 Balas hanya dengan objek JSON yang diminta.`,
@@ -303,7 +356,67 @@ Balas hanya dengan objek JSON yang diminta.`,
   const { storySegments, choices, inventoryUpdates, quests, isGameOver, gameOverMessage,
     sceneVisualContext, characterVisualIdentity, locationVisualIdentity } = gameStateUpdate;
 
-  // 2. Generate images for all segments in parallel
+  // 2. Generate portraits for new characters
+  const newCharacterPortraits: CharacterPortrait[] = [];
+  const newCharacterEntries = gameStateUpdate.newCharacters || [];
+
+  if (newCharacterEntries.length > 0) {
+    const portraitPromises = newCharacterEntries.map(async (char) => {
+      const portraitPrompt = `Character portrait, head and upper body, centered composition, neutral dark background with subtle vignette. ${char.visualDescription}. Style: ${getArtStylePrompt(settings.artStyle)}. High detail face, clear facial features, portrait lighting from upper left.`;
+      try {
+        const portraitResponse = await ai.models.generateContent({
+          model: imageModel,
+          contents: { parts: [{ text: portraitPrompt }] },
+          config: {
+            imageConfig: {
+              aspectRatio: "1:1",
+              imageSize: "256",
+            }
+          }
+        });
+
+        let portraitBase64 = '';
+        const candidate = portraitResponse.candidates?.[0];
+        if (candidate?.content?.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.inlineData) {
+              portraitBase64 = part.inlineData.data;
+              break;
+            }
+          }
+        }
+
+        if (portraitBase64) {
+          return {
+            id: `char_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            name: char.name,
+            role: char.role,
+            visualDescription: char.visualDescription,
+            portraitBase64,
+            isMainCharacter: char.isMainCharacter,
+          } as CharacterPortrait;
+        }
+        return null;
+      } catch (err) {
+        console.error(`Portrait generation failed for ${char.name}:`, err);
+        return null;
+      }
+    });
+
+    const portraits = await Promise.all(portraitPromises);
+    for (const p of portraits) {
+      if (p) newCharacterPortraits.push(p);
+    }
+  }
+
+  // Combine known characters with newly generated portraits for reference
+  const allCharacters = [...knownCharacters, ...newCharacterPortraits];
+  const sceneCharNames = gameStateUpdate.sceneCharacterNames || [];
+
+  // Find character portraits that appear in this scene for image reference
+  const scenePortraits = allCharacters.filter(c => sceneCharNames.includes(c.name));
+
+  // 3. Generate images for all segments in parallel (with character portrait references)
   // Compose a shared visual prefix from scene context + character identity + location identity
   const visualPrefix = [
     sceneVisualContext && `Scene: ${sceneVisualContext}`,
@@ -311,12 +424,35 @@ Balas hanya dengan objek JSON yang diminta.`,
     locationVisualIdentity && `Location: ${locationVisualIdentity}`,
   ].filter(Boolean).join('. ');
 
+  // Build character reference text for image prompts
+  const charRefText = scenePortraits.length > 0
+    ? `. Characters in scene (use the reference portrait images provided for visual consistency): ${scenePortraits.map(c => `${c.name} — ${c.visualDescription}`).join('; ')}`
+    : '';
+
   const imagePromises = storySegments.map(async (segment) => {
-    const fullImagePrompt = `${visualPrefix}. Action: ${segment.imagePrompt}. Style: ${getArtStylePrompt(settings.artStyle)}`;
+    const fullImagePrompt = `${visualPrefix}${charRefText}. Action: ${segment.imagePrompt}. Style: ${getArtStylePrompt(settings.artStyle)}`;
+
+    // Build parts: text prompt + character portrait reference images
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+      { text: fullImagePrompt },
+    ];
+
+    // Add character portrait images as visual references
+    for (const portrait of scenePortraits) {
+      if (portrait.portraitBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: 'image/png',
+            data: portrait.portraitBase64,
+          },
+        });
+      }
+    }
+
     try {
       const imageResponse = await ai.models.generateContent({
         model: imageModel,
-        contents: { parts: [{ text: fullImagePrompt }] },
+        contents: { parts },
         config: {
           imageConfig: {
             aspectRatio: "16:9",
@@ -382,6 +518,8 @@ Balas hanya dengan objek JSON yang diminta.`,
     gameOverMessage: gameOverMessage || '',
     voiceChat,
     talkableCharacters: talkableCharacters.length > 0 ? talkableCharacters : undefined,
+    sceneCharacterNames: sceneCharNames.length > 0 ? sceneCharNames : undefined,
+    highlightCharacter: gameStateUpdate.highlightCharacter || undefined,
   };
 
   const newHistory = [...currentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];
@@ -394,5 +532,6 @@ Balas hanya dengan objek JSON yang diminta.`,
     newHistory,
     characterVisualIdentity: characterVisualIdentity || '',
     locationVisualIdentity: locationVisualIdentity || '',
+    newCharacterPortraits,
   };
 };

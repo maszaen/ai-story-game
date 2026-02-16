@@ -1,4 +1,4 @@
-import type { Scene, QuestItem } from '../types';
+import type { Scene, QuestItem, CharacterPortrait } from '../types';
 
 const DB_NAME = 'adventure-engine-db';
 const DB_VERSION = 2;
@@ -25,6 +25,8 @@ export interface SaveData {
   characterVisualIdentity: string;
   /** Persistent visual identity of the current location */
   locationVisualIdentity: string;
+  /** Known characters with generated portraits for visual consistency */
+  knownCharacters: CharacterPortrait[];
 }
 
 function openDB(): Promise<IDBDatabase> {

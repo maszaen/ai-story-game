@@ -11,7 +11,7 @@ import { getNextScene } from './services/geminiService';
 import { putSave, generateSaveId, type SaveData } from './services/database';
 import { getSettings, saveSettings, type GameSettings } from './services/settings';
 import { IconBook, IconSwords, IconScroll } from './components/Icons';
-import type { Scene, QuestItem, VoiceChatConfig, ChatMessage } from './types';
+import type { Scene, QuestItem, VoiceChatConfig, ChatMessage, CharacterPortrait } from './types';
 import type { Genre } from './constants';
 
 type AppView = 'home' | 'settings' | 'genre-picker' | 'saved-games' | 'game';
@@ -195,6 +195,8 @@ const App: React.FC = () => {
   const [activeVoiceChatChar, setActiveVoiceChatChar] = useState<VoiceChatConfig | null>(null);
   /** Accumulated conversation messages per character (keyed by characterName) for optional talks */
   const [conversationLogs, setConversationLogs] = useState<Record<string, ChatMessage[]>>({});
+  /** Known characters with generated portraits for visual consistency */
+  const [knownCharacters, setKnownCharacters] = useState<CharacterPortrait[]>([]);
 
   // Scroll story to top when scene changes
   useEffect(() => {
@@ -223,6 +225,7 @@ const App: React.FC = () => {
     goMessage: string,
     charVisual: string,
     locVisual: string,
+    chars: CharacterPortrait[],
   ) => {
     const latestScene = scenes[scenes.length - 1];
     const save: SaveData = {
@@ -241,6 +244,7 @@ const App: React.FC = () => {
       gameOverMessage: goMessage,
       characterVisualIdentity: charVisual,
       locationVisualIdentity: locVisual,
+      knownCharacters: chars,
     };
     await putSave(save);
   }, []);
@@ -269,6 +273,7 @@ const App: React.FC = () => {
     setIsGameOver(false);
     setGameOverMessage('');
     setError(null);
+    setKnownCharacters([]);
     setView('game');
   }, []);
 
@@ -287,6 +292,7 @@ const App: React.FC = () => {
     setIsGameOver(save.isGameOver);
     setGameOverMessage(save.gameOverMessage);
     setError(null);
+    setKnownCharacters(save.knownCharacters || []);
     setView('game');
   }, []);
 
@@ -342,12 +348,17 @@ const App: React.FC = () => {
       setIsGameOver(result.scene.isGameOver);
       setGameOverMessage(result.scene.gameOverMessage);
 
+      // Store new character portraits
+      const updatedChars = [...result.newCharacterPortraits];
+      setKnownCharacters(updatedChars);
+
       if (currentSaveId && settings.autoSave) {
         await saveProgress(
           newScenes, 0, newInv, result.quests, result.newHistory,
           currentSaveId, saveName, newTurnCount,
           result.scene.isGameOver, result.scene.gameOverMessage,
-          result.characterVisualIdentity, result.locationVisualIdentity
+          result.characterVisualIdentity, result.locationVisualIdentity,
+          updatedChars
         );
       }
 
@@ -384,7 +395,7 @@ const App: React.FC = () => {
       const result = await getNextScene(storyHistory, fullChoice, settings, {
         characterVisualIdentity,
         locationVisualIdentity,
-      });
+      }, knownCharacters);
 
       const newTurnCount = turnCount + 1;
       setTurnCount(newTurnCount);
@@ -406,6 +417,12 @@ const App: React.FC = () => {
       setIsGameOver(result.scene.isGameOver);
       setGameOverMessage(result.scene.gameOverMessage);
 
+      // Merge new character portraits with existing ones
+      const updatedChars = result.newCharacterPortraits.length > 0
+        ? [...knownCharacters, ...result.newCharacterPortraits]
+        : knownCharacters;
+      setKnownCharacters(updatedChars);
+
       // Reset conversation logs for new scene
       setConversationLogs({});
 
@@ -414,7 +431,8 @@ const App: React.FC = () => {
           newScenes, newIdx, updatedInv, result.quests, result.newHistory,
           currentSaveId, saveName, newTurnCount,
           result.scene.isGameOver, result.scene.gameOverMessage,
-          result.characterVisualIdentity, result.locationVisualIdentity
+          result.characterVisualIdentity, result.locationVisualIdentity,
+          updatedChars
         );
       }
     } catch (e) {
@@ -423,7 +441,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity, conversationLogs]);
+  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity, conversationLogs, knownCharacters]);
 
   /** Start mandatory voice chat (existing behavior) */
   const handleStartVoiceChat = useCallback(() => {
@@ -529,6 +547,8 @@ const App: React.FC = () => {
           currentSceneIndex={currentSceneIndex}
           onNavigateScene={(idx) => { handleNavigateScene(idx); }}
           isGameOver={isGameOver}
+          knownCharacters={knownCharacters}
+          highlightCharacter={currentScene?.highlightCharacter}
         />
       </div>
 

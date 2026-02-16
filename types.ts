@@ -7,6 +7,16 @@ export interface QuestItem {
   completed: boolean;
 }
 
+/** A known character with a generated portrait for visual consistency */
+export interface CharacterPortrait {
+  id: string;
+  name: string;
+  role: string;
+  visualDescription: string;
+  portraitBase64: string; // base64 image data without data URL prefix
+  isMainCharacter: boolean;
+}
+
 /** Configuration for a voice chat scene with an NPC character */
 export interface VoiceChatConfig {
   characterName: string;
@@ -65,6 +75,17 @@ export interface GameStateUpdate {
     initialDialogue: string;
     systemInstruction: string;
   }[];
+  /** New important characters introduced in this scene that need portrait generation */
+  newCharacters: {
+    name: string;
+    role: string;
+    visualDescription: string;
+    isMainCharacter: boolean;
+  }[];
+  /** Names of known characters who appear in this scene's images */
+  sceneCharacterNames: string[];
+  /** Optional: character name to highlight/move to front in the sidebar gallery */
+  highlightCharacter: string;
 }
 
 export interface Scene {
@@ -80,4 +101,8 @@ export interface Scene {
   voiceChat?: VoiceChatConfig | null;
   /** NPCs the player can optionally talk to (shown alongside choices) */
   talkableCharacters?: VoiceChatConfig[];
+  /** Names of characters appearing in this scene */
+  sceneCharacterNames?: string[];
+  /** Character to highlight in sidebar gallery */
+  highlightCharacter?: string;
 }
