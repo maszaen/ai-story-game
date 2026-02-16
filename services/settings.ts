@@ -15,6 +15,8 @@ export interface GameSettings {
   artStyle: ArtStyle;
   autoSave: boolean;
   gender: Gender;
+  /** When true, API key is stored in localStorage (survives refresh). Otherwise sessionStorage. */
+  persistApiKey: boolean;
 }
 
 const SETTINGS_KEY = 'adventure-engine-settings';
@@ -43,6 +45,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   artStyle: 'ghibli',
   autoSave: true,
   gender: 'male',
+  persistApiKey: false,
 };
 
 export function getSettings(): GameSettings {

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { GameSettings, ArtStyle, SegmentCount, Gender } from '../services/settings';
 import { ART_STYLE_LABELS, GENDER_LABELS } from '../services/settings';
-import { setApiKey, isEnvKey, hasSessionKey } from '../services/apiKey';
+import { setApiKey, isEnvKey, hasSessionKey, migratePersistence } from '../services/apiKey';
 import { createBackup, restoreBackup, type BackupProgress, type RestoreProgress } from '../services/backup';
 import type { ImageSize } from './ImageSizeSelector';
 import { IconGear, IconShield, IconScroll } from './Icons';
@@ -24,10 +24,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
 
   const handleSaveApiKey = () => {
     if (!apiKeyInput.trim()) return;
-    setApiKey(apiKeyInput);
+    setApiKey(apiKeyInput, settings.persistApiKey);
     setApiKeyInput('');
     setKeySaved(true);
     setTimeout(() => setKeySaved(false), 2000);
+  };
+
+  const handleTogglePersist = () => {
+    const newPersist = !settings.persistApiKey;
+    migratePersistence(newPersist);
+    update({ persistApiKey: newPersist });
   };
 
   // ── Backup & Restore state ──
@@ -119,14 +125,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
 
         {/* API Key — only show when no env var */}
         {!envKeyActive && (
-          <SettingCard title="Gemini API Key" desc="Diperlukan untuk bermain. Key tidak disimpan permanen — akan hilang setelah menutup browser.">
+          <SettingCard title="Gemini API Key" desc={settings.persistApiKey ? 'Key disimpan permanen di browser ini.' : 'Key tidak disimpan permanen — akan hilang setelah menutup browser.'}>
             {sessionKeyActive && !keySaved ? (
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex-1 px-3 py-2 rounded border border-amber-800/30 bg-amber-950/20"
                   style={{ fontFamily: "'Crimson Text', serif", fontSize: '0.9rem', color: 'rgba(201,168,76,0.5)' }}>
                   ••••••••••••••••••••
                 </div>
-                <span className="text-xs" style={{ color: 'rgba(100,180,100,0.7)', fontFamily: "'Cinzel', serif" }}>Aktif</span>
+                <span className="text-xs" style={{ color: 'rgba(100,160,80,0.7)', fontFamily: "'Cinzel', serif" }}>Aktif</span>
               </div>
             ) : null}
             <div className="flex gap-2">
@@ -162,6 +168,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
                 </a>
               </p>
             )}
+
+            {/* Persistent API key toggle */}
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
+              <button
+                onClick={handleTogglePersist}
+                className="flex items-center gap-3 w-full"
+              >
+                <div className={`w-12 h-6 rounded-full relative transition-all duration-300 ${
+                  settings.persistApiKey ? 'bg-amber-700' : 'bg-amber-950 border border-amber-900/40'
+                }`}>
+                  <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all duration-300 ${
+                    settings.persistApiKey
+                      ? 'left-[26px] bg-amber-400'
+                      : 'left-0.5 bg-amber-800'
+                  }`} />
+                </div>
+                <span className={`text-sm ${settings.persistApiKey ? 'text-amber-400' : 'text-amber-700/60'}`}
+                  style={{ fontFamily: "'Crimson Text', serif" }}>
+                  {settings.persistApiKey ? 'Simpan Permanen' : 'Sementara (hilang saat refresh)'}
+                </span>
+              </button>
+            </div>
           </SettingCard>
         )}
 

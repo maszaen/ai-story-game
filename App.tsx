@@ -613,12 +613,27 @@ const App: React.FC = () => {
         {error && (
           <div className="flex-shrink-0 p-4">
             <div className="w-full max-w-4xl mx-auto p-4 rounded-lg" style={{
-              background: 'rgba(139, 26, 26, 0.2)',
-              border: '1px solid rgba(139, 26, 26, 0.4)',
-              color: '#d4a0a0',
-              fontFamily: "'Crimson Text', serif",
+              background: 'linear-gradient(180deg, rgba(40,18,12,0.85) 0%, rgba(25,10,8,0.9) 100%)',
+              border: '1px solid rgba(160,100,60,0.35)',
+              boxShadow: '0 0 20px rgba(160,100,60,0.08), inset 0 1px 0 rgba(201,168,76,0.05)',
             }}>
-              {error}
+              <p style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '0.8rem',
+                color: 'rgba(201,140,80,0.7)',
+                marginBottom: '4px',
+                letterSpacing: '0.05em',
+              }}>
+                Terjadi Kesalahan
+              </p>
+              <p style={{
+                fontFamily: "'Crimson Text', serif",
+                fontSize: '0.9rem',
+                color: 'rgba(200,160,120,0.7)',
+                lineHeight: 1.5,
+              }}>
+                {error}
+              </p>
             </div>
           </div>
         )}
