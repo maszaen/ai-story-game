@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import type { VoiceChatConfig, ChatMessage } from '../types';
 import { getApiKey } from '../services/apiKey';
@@ -353,6 +353,8 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     } else {
       setStatusMessage('Berbicara...');
     }
+    // Scroll chat to bottom on mode switch
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
   const handleSendText = useCallback(async () => {
@@ -388,6 +390,17 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     }
   };
 
+  // Merge transcript + streaming into a single list with stable keys
+  // This prevents the "blink" when a streaming message commits to transcript —
+  // React reuses the same DOM node (same key) instead of unmount/remount
+  const displayMessages = useMemo(() => {
+    if (!streamingMessage || !streamingMessage.text) return transcript;
+    // Only append if not already committed (dedup by id)
+    const lastTranscript = transcript[transcript.length - 1];
+    if (lastTranscript && lastTranscript.id === streamingMessage.id) return transcript;
+    return [...transcript, streamingMessage];
+  }, [transcript, streamingMessage]);
+
   const characterInitial = voiceChat.characterName.charAt(0).toUpperCase();
 
   return (
@@ -419,33 +432,25 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
         )}
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat Messages — unified list to avoid blink on commit */}
       <div className="voice-chat-messages">
-        {transcript.map((msg) => (
-          <div key={msg.id} className={`voice-chat-bubble ${msg.sender === 'user' ? 'vc-bubble-user' : 'vc-bubble-char'}`}>
-            {msg.sender === 'character' && (
-              <span className="vc-bubble-sender">{voiceChat.characterName}</span>
-            )}
-            {msg.sender === 'user' && (
-              <span className="vc-bubble-sender vc-sender-user">Kamu</span>
-            )}
-            <p>{msg.text}</p>
-          </div>
-        ))}
-        {streamingMessage && streamingMessage.text && (
-          <div className={`voice-chat-bubble ${streamingMessage.sender === 'user' ? 'vc-bubble-user' : 'vc-bubble-char'}`}>
-            {streamingMessage.sender === 'character' && (
-              <span className="vc-bubble-sender">{voiceChat.characterName}</span>
-            )}
-            {streamingMessage.sender === 'user' && (
-              <span className="vc-bubble-sender vc-sender-user">Kamu</span>
-            )}
-            <p>
-              {streamingMessage.text}
-              <span className="vc-typing-cursor">|</span>
-            </p>
-          </div>
-        )}
+        {displayMessages.map((msg) => {
+          const isStreaming = streamingMessage != null && msg.id === streamingMessage.id;
+          return (
+            <div key={msg.id} className={`voice-chat-bubble ${msg.sender === 'user' ? 'vc-bubble-user' : 'vc-bubble-char'}`}>
+              {msg.sender === 'character' && (
+                <span className="vc-bubble-sender">{voiceChat.characterName}</span>
+              )}
+              {msg.sender === 'user' && (
+                <span className="vc-bubble-sender vc-sender-user">Kamu</span>
+              )}
+              <p>
+                {msg.text}
+                {isStreaming && <span className="vc-typing-cursor">|</span>}
+              </p>
+            </div>
+          );
+        })}
         <div ref={chatEndRef} />
       </div>
 
@@ -482,7 +487,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
 
       {/* Controls */}
       <div className="voice-chat-controls">
-        <span className="voice-chat-status">{statusMessage}</span>
+        {/* <span className="voice-chat-status">{statusMessage}</span> */}
         <div className="voice-chat-actions">
           {/* Keyboard button — only visible when session is active */}
           {isSessionActive && (

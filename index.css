@@ -1257,7 +1257,7 @@ body {
 
 .vc-text-input-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   border: 1px solid rgba(201, 168, 76, 0.25);
   border-radius: 10px;
