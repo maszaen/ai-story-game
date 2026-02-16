@@ -13,6 +13,7 @@ import { getSettings, saveSettings, type GameSettings } from './services/setting
 import { audioManager, type BacksoundId } from './services/audioManager';
 import { AssetLoader } from './components/AssetLoader';
 import { IconBook, IconSwords, IconScroll } from './components/Icons';
+import favicon from './assets/infinite.png';
 import type { Scene, QuestItem, VoiceChatConfig, ChatMessage, CharacterPortrait } from './types';
 import type { Genre } from './constants';
 
@@ -209,6 +210,13 @@ const App: React.FC = () => {
 
   // Initial Asset Load
   useEffect(() => {
+    // Set favicon dynamically (handles cache busting via Vite)
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    (link as HTMLLinkElement).type = 'image/png';
+    (link as HTMLLinkElement).rel = 'icon';
+    (link as HTMLLinkElement).href = favicon;
+    document.getElementsByTagName('head')[0].appendChild(link);
+
     const initAudio = async () => {
       await audioManager.init((progress, file) => {
          setLoadProgress(progress);
