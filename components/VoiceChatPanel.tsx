@@ -33,6 +33,16 @@ const StopIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
+const MicMutedIcon: React.FC<{ size?: number }> = ({ size = 24 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .87-.16 1.71-.46 2.49" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+
 const KeyboardIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="14" rx="2" ry="2" />
@@ -59,6 +69,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Membuka gerbang komunikasi...');
+  const [isMuted, setIsMuted] = useState(false);
   const isMutedRef = useRef(false);
   const autoStartedRef = useRef(false);
   const [transcript, setTranscript] = useState<ChatMessage[]>(
@@ -317,11 +328,16 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     );
   }, [voiceChat, onComplete, stopSession, commitStreaming]);
 
-  const handleToggleSession = () => {
-    if (isSessionActive) {
-      stopSession();
+  const handleToggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    isMutedRef.current = newMuted;
+    if (newMuted) {
+      setStatusMessage('Mikrofon dibisukan');
     } else {
-      startSession();
+      // Unmute — also close text input if open
+      setShowTextInput(false);
+      setStatusMessage('Berbicara...');
     }
   };
 
@@ -330,6 +346,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     setShowTextInput(newShowTextInput);
     // Mute mic when keyboard is shown, unmute when hidden
     isMutedRef.current = newShowTextInput;
+    setIsMuted(newShowTextInput);
     if (newShowTextInput) {
       setStatusMessage('Mikrofon dibisukan — mode ketik aktif');
       setTimeout(() => textInputRef.current?.focus(), 50);
@@ -346,6 +363,10 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     const userMsg: ChatMessage = { id: Date.now(), sender: 'user', text };
     setTranscript(t => [...t, userMsg]);
     setTextInputValue('');
+    // Reset textarea height
+    if (textInputRef.current) {
+      textInputRef.current.style.height = 'auto';
+    }
 
     // Send to live session if active
     if (sessionPromiseRef.current) {
@@ -437,9 +458,14 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
               className="vc-text-input"
               value={textInputValue}
               onChange={e => setTextInputValue(e.target.value)}
+              onInput={e => {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 4 * 1.5 * 16) + 'px';
+              }}
               onKeyDown={handleTextKeyDown}
               placeholder="Tulis pesanmu di sini..."
-              rows={2}
+              rows={1}
             />
             <button
               className="vc-text-send-btn"
@@ -469,15 +495,15 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
             </button>
           )}
           <button
-            onClick={handleToggleSession}
-            className={`voice-chat-mic-btn ${isSessionActive ? 'vc-mic-active' : ''} ${showTextInput ? 'vc-mic-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-connecting' : ''}`}
-            title={isSessionActive ? 'Hentikan sesi' : 'Mulai berbicara'}
-            disabled={hasStarted && !isSessionActive}
+            onClick={handleToggleMute}
+            className={`voice-chat-mic-btn ${isSessionActive ? 'vc-mic-active' : ''} ${isMuted ? 'vc-mic-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-connecting' : ''}`}
+            title={isMuted ? 'Aktifkan mikrofon' : 'Bisukan mikrofon'}
+            disabled={!isSessionActive}
           >
-            <div className={`voice-chat-mic-inner ${isSessionActive ? 'vc-mic-inner-active' : ''} ${showTextInput ? 'vc-mic-inner-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-inner-connecting' : ''}`}>
+            <div className={`voice-chat-mic-inner ${isSessionActive ? 'vc-mic-inner-active' : ''} ${isMuted ? 'vc-mic-inner-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-inner-connecting' : ''}`}>
               {hasStarted && !isSessionActive
                 ? <div className="vc-mic-loader" />
-                : isSessionActive ? <StopIcon size={24} /> : <MicIcon size={24} />
+                : isMuted ? <MicMutedIcon size={24} /> : <MicIcon size={24} />
               }
             </div>
           </button>

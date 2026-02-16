@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import type { Scene, VoiceChatConfig } from '../types';
+import type { Scene } from '../types';
 import { IconSkull } from './Icons';
-import { LoadingSpinner } from './LoadingSpinner';
 import { SpeakableText } from './SpeakableText';
 
 interface StoryPanelProps {
@@ -42,8 +41,8 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
       <div className="w-full max-w-4xl mx-auto scene-enter" key={scene.segments.map(s => s.text.slice(0, 30)).join('|')}>
           {scene.segments.map((segment, index) => (
             <div key={index} className="mb-2 stagger-child">
-              {/* Image */}
-              {segment.image && (
+              {/* Image — loaded or shimmer placeholder */}
+              {segment.image ? (
                 <div
                   className="medieval-frame cursor-pointer group image-reveal"
                   onClick={() => setExpandedImage(segment.image)}
@@ -52,7 +51,7 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
                     <img
                       src={segment.image}
                       alt={`Adegan ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-500 scale-105 group-hover:scale-100 scene-image-enter"
                       style={{ opacity: 0.92 }}
                     />
                     {/* Vignette */}
@@ -65,6 +64,26 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
                     <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-70 transition-opacity"
                       style={{ color: '#c9a84c', fontSize: '0.7rem', fontFamily: "'Cinzel', serif" }}>
                       Klik untuk perbesar
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Shimmer placeholder while image is generating */
+                <div className="medieval-frame">
+                  <div className="relative w-full aspect-video overflow-hidden image-shimmer-container">
+                    {/* Dark shimmer background */}
+                    <div className="image-shimmer-bg" />
+                    {/* Shimmer border glow */}
+                    <div className="image-shimmer-border" />
+                    {/* Centered text */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                      <span className="image-shimmer-icon">⚔</span>
+                      <span className="image-shimmer-text">Adegan sedang direkonstruksi</span>
+                      <span className="image-shimmer-dots">
+                        <span className="shimmer-dot" />
+                        <span className="shimmer-dot" />
+                        <span className="shimmer-dot" />
+                      </span>
                     </div>
                   </div>
                 </div>

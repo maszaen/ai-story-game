@@ -85,10 +85,8 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
 
   // Collapse/expand state
   const [collapsed, setCollapsed] = useState(true);
-  // Auto-collapse arming: becomes true once user has scrolled to bottom after expanding from above
+  // Auto-collapse arming: becomes true once user has scrolled to bottom after expanding
   const autoCollapseArmedRef = useRef(false);
-  // Track if user was at bottom when they expanded
-  const wasAtBottomOnExpandRef = useRef(false);
 
   const handleChoiceClick = (choice: string, index: number) => {
     setExitingChoice(index);
@@ -113,7 +111,6 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
     if (choices !== prevChoicesRef.current) {
       setCollapsed(true);
       autoCollapseArmedRef.current = false;
-      wasAtBottomOnExpandRef.current = false;
       prevChoicesRef.current = choices;
     }
   }, [choices]);
@@ -126,20 +123,11 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
   // Handle expand click
   const handleExpand = useCallback(() => {
     setCollapsed(false);
-
-    const el = scrollContainerRef?.current;
-    if (el) {
-      const atBottom = isNearBottom(el);
-      wasAtBottomOnExpandRef.current = atBottom;
-      if (atBottom) {
-        // Case 1: user is at bottom — auto-collapse is immediately armed
-        autoCollapseArmedRef.current = true;
-      } else {
-        // Case 2: user is above — arm only after they reach bottom
-        autoCollapseArmedRef.current = false;
-      }
-    }
-  }, [scrollContainerRef, isNearBottom]);
+    // Never arm immediately — always require scrolling to bottom first.
+    // This avoids the bug where expanding from bottom shrinks clientHeight,
+    // inflating distanceFromBottom past the threshold before user even scrolls.
+    autoCollapseArmedRef.current = false;
+  }, []);
 
   // Scroll listener for auto-collapse
   useEffect(() => {
@@ -152,27 +140,18 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
       const scrollHeight = el.scrollHeight;
       const clientHeight = el.clientHeight;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const threshold30 = clientHeight * 0.3;
+      const threshold50 = clientHeight * 0.5;
 
-      if (wasAtBottomOnExpandRef.current) {
-        // Case 1: expanded from bottom — collapse when scrolling 30% up
-        if (autoCollapseArmedRef.current && distanceFromBottom > threshold30) {
-          setCollapsed(true);
-          autoCollapseArmedRef.current = false;
+      if (!autoCollapseArmedRef.current) {
+        // Not yet armed — watch for reaching bottom
+        if (distanceFromBottom <= 50) {
+          autoCollapseArmedRef.current = true;
         }
       } else {
-        // Case 2: expanded from above
-        if (!autoCollapseArmedRef.current) {
-          // Not yet armed — watch for reaching bottom
-          if (distanceFromBottom <= 50) {
-            autoCollapseArmedRef.current = true;
-          }
-        } else {
-          // Armed — collapse when scrolling 30% up from bottom
-          if (distanceFromBottom > threshold30) {
-            setCollapsed(true);
-            autoCollapseArmedRef.current = false;
-          }
+        // Armed — collapse when scrolling up past 50% from bottom
+        if (distanceFromBottom > threshold50) {
+          setCollapsed(true);
+          autoCollapseArmedRef.current = false;
         }
       }
     };
@@ -457,7 +436,7 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
                         choices.length
                       )}
                       disabled={isLoading || exitingChoice !== null}
-                      className={`btn-choice btn-choice-conversation rounded-lg choice-enter flex items-start text-left w-full ${
+                      className={`btn-choice rounded-lg flex items-start text-left w-full ${
                         exitingChoice !== null && exitingChoice !== choices.length
                           ? "choice-exit-fade"
                           : ""

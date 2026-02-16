@@ -204,6 +204,83 @@ const storyResponseSchema = {
   required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters', 'newCharacters', 'sceneCharacterNames', 'highlightCharacter', 'backsound'],
 };
 
+/**
+ * Summarize old history entries to keep payload small.
+ * Keeps the last `keepRecent` user+model pairs in full,
+ * and compresses older pairs into a single summary message.
+ */
+function summarizeHistory(
+  history: { role: string; parts: { text: string }[] }[],
+  keepRecent: number = 5,
+): { role: string; parts: { text: string }[] }[] {
+  // Count user+model pairs (each pair = 2 entries)
+  // History is: [user, model, user, model, ...]
+  const pairCount = Math.floor(history.length / 2);
+
+  if (pairCount <= keepRecent) {
+    return history; // Nothing to summarize
+  }
+
+  const pairsToSummarize = pairCount - keepRecent;
+  const entriesToSummarize = pairsToSummarize * 2; // each pair has 2 entries
+
+  // Build summary from old entries
+  const summaryParts: string[] = [];
+  for (let i = 0; i < entriesToSummarize; i += 2) {
+    const userEntry = history[i];
+    const modelEntry = history[i + 1];
+
+    // Extract player choice
+    const playerAction = userEntry?.parts?.[0]?.text || '';
+
+    // Parse model response to extract just story text (not full JSON)
+    let storyText = '';
+    try {
+      const parsed = JSON.parse(modelEntry?.parts?.[0]?.text || '{}');
+      const segments = parsed.storySegments || [];
+      storyText = segments.map((s: { text: string }) => s.text).join(' ');
+      // Include choices for context
+      const choices = parsed.choices || [];
+      if (choices.length > 0) {
+        storyText += ` [Pilihan: ${choices.map((c: { text: string }) => c.text).join(' / ')}]`;
+      }
+    } catch {
+      storyText = modelEntry?.parts?.[0]?.text?.slice(0, 200) || '';
+    }
+
+    summaryParts.push(`Babak ${Math.floor(i / 2) + 1}: Pemain: "${playerAction.slice(0, 100)}". ${storyText}`);
+  }
+
+  const summaryMessage = {
+    role: 'user',
+    parts: [{
+      text: `[RINGKASAN CERITA SEBELUMNYA — babak 1 sampai ${pairsToSummarize}]\n${summaryParts.join('\n\n')}\n[AKHIR RINGKASAN — cerita detail dilanjutkan di bawah]`,
+    }],
+  };
+
+  // Keep the summary + recent entries
+  const recentEntries = history.slice(entriesToSummarize);
+  return [summaryMessage, ...recentEntries];
+}
+
+/** Callbacks for streaming scene generation */
+export interface SceneStreamCallbacks {
+  /** Called when story text + choices are ready (images still loading) */
+  onStoryReady?: (partialScene: Scene, metadata: {
+    newInventory: string[];
+    removedInventory: string[];
+    quests: QuestItem[];
+    newHistory: { role: string; parts: { text: string }[] }[];
+    characterVisualIdentity: string;
+    locationVisualIdentity: string;
+    newCharacterPortraits: CharacterPortrait[];
+  }) => void;
+  /** Called when a single segment's image finishes generating */
+  onImageReady?: (segmentIndex: number, imageDataUrl: string) => void;
+  /** Called when all images are done */
+  onAllImagesReady?: () => void;
+}
+
 export const getNextScene = async (
   storyHistory: { role: string; parts: { text: string }[] }[],
   playerChoice: string,
@@ -213,6 +290,7 @@ export const getNextScene = async (
     locationVisualIdentity: string;
   },
   knownCharacters: CharacterPortrait[] = [],
+  streamCallbacks?: SceneStreamCallbacks,
 ): Promise<{
   scene: Scene;
   newInventory: string[];
@@ -228,7 +306,9 @@ export const getNextScene = async (
   const storyModel = 'gemini-3-pro-preview';
   const imageModel = 'gemini-3-pro-image-preview';
 
-  const currentHistory = [...storyHistory, { role: 'user', parts: [{ text: playerChoice }] }];
+  // Summarize old history to keep payload small
+  const summarizedHistory = summarizeHistory(storyHistory);
+  const currentHistory = [...summarizedHistory, { role: 'user', parts: [{ text: playerChoice }] }];
 
   // Build visual identity context for the system prompt
   const visualIdentityContext = previousVisualIdentity
@@ -361,7 +441,68 @@ Balas hanya dengan objek JSON yang diminta.`,
   const { storySegments, choices, inventoryUpdates, quests, isGameOver, gameOverMessage,
     sceneVisualContext, characterVisualIdentity, locationVisualIdentity } = gameStateUpdate;
 
-  // 2. Generate portraits for new characters
+  // Extract voice chat config if present
+  const voiceChat = gameStateUpdate.requiresVoiceChat && gameStateUpdate.voiceChatConfig?.characterName
+    ? {
+        characterName: gameStateUpdate.voiceChatConfig.characterName,
+        characterRole: gameStateUpdate.voiceChatConfig.characterRole,
+        voiceName: gameStateUpdate.voiceChatConfig.voiceName || 'Kore',
+        initialDialogue: gameStateUpdate.voiceChatConfig.initialDialogue,
+        systemInstruction: gameStateUpdate.voiceChatConfig.systemInstruction,
+      }
+    : null;
+
+  // Extract talkable characters if present (optional talk mode)
+  const talkableCharacters = !gameStateUpdate.requiresVoiceChat && gameStateUpdate.talkableCharacters?.length
+    ? gameStateUpdate.talkableCharacters
+        .filter(c => c.characterName) // filter out empty entries
+        .map(c => ({
+          characterName: c.characterName,
+          characterRole: c.characterRole,
+          voiceName: c.voiceName || 'Kore',
+          initialDialogue: c.initialDialogue,
+          systemInstruction: c.systemInstruction,
+        }))
+    : [];
+
+  // Build the full history for storage (use the original storyHistory, not summarized)
+  const fullCurrentHistory = [...storyHistory, { role: 'user', parts: [{ text: playerChoice }] }];
+  const newHistory = [...fullCurrentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];
+
+  // Build initial scene with placeholder (empty) images — text is ready!
+  const initialSegments = storySegments.map((seg) => ({
+    text: seg.text,
+    image: '', // placeholder — images will stream in
+  }));
+
+  const partialScene: Scene = {
+    segments: initialSegments,
+    choices,
+    isGameOver,
+    gameOverMessage: gameOverMessage || '',
+    voiceChat,
+    talkableCharacters: talkableCharacters.length > 0 ? talkableCharacters : undefined,
+    sceneCharacterNames: (gameStateUpdate.sceneCharacterNames || []).length > 0 ? gameStateUpdate.sceneCharacterNames : undefined,
+    highlightCharacter: gameStateUpdate.highlightCharacter || undefined,
+    backsound: gameStateUpdate.backsound || undefined,
+  };
+
+  const metadata = {
+    newInventory: inventoryUpdates.add || [],
+    removedInventory: inventoryUpdates.remove || [],
+    quests: quests || [],
+    newHistory,
+    characterVisualIdentity: characterVisualIdentity || '',
+    locationVisualIdentity: locationVisualIdentity || '',
+    newCharacterPortraits: [] as CharacterPortrait[], // will update after portraits finish
+  };
+
+  // --- STREAMING: fire story ready callback immediately ---
+  if (streamCallbacks?.onStoryReady) {
+    streamCallbacks.onStoryReady(partialScene, metadata);
+  }
+
+  // 2. Generate portraits for new characters (in parallel with nothing blocking)
   const newCharacterPortraits: CharacterPortrait[] = [];
   const newCharacterEntries = gameStateUpdate.newCharacters || [];
 
@@ -414,6 +555,9 @@ Balas hanya dengan objek JSON yang diminta.`,
     }
   }
 
+  // Update metadata with actual portraits
+  metadata.newCharacterPortraits = newCharacterPortraits;
+
   // Combine known characters with newly generated portraits for reference
   const allCharacters = [...knownCharacters, ...newCharacterPortraits];
   const sceneCharNames = gameStateUpdate.sceneCharacterNames || [];
@@ -434,7 +578,8 @@ Balas hanya dengan objek JSON yang diminta.`,
     ? `. Characters in scene (use the reference portrait images provided for visual consistency): ${scenePortraits.map(c => `${c.name} — ${c.visualDescription}`).join('; ')}`
     : '';
 
-  const imagePromises = storySegments.map(async (segment) => {
+  // Generate each image and stream via callback as each completes
+  const imagePromises = storySegments.map(async (segment, segIndex) => {
     const fullImagePrompt = `${visualPrefix}${charRefText}. Action: ${segment.imagePrompt}. Style: ${getArtStylePrompt(settings.artStyle)}`;
 
     // Build parts: text prompt + character portrait reference images
@@ -477,7 +622,14 @@ Balas hanya dengan objek JSON yang diminta.`,
         }
       }
 
-      return imageBase64 ? `data:image/png;base64,${imageBase64}` : '';
+      const imageDataUrl = imageBase64 ? `data:image/png;base64,${imageBase64}` : '';
+
+      // Stream this image to the UI
+      if (imageDataUrl && streamCallbacks?.onImageReady) {
+        streamCallbacks.onImageReady(segIndex, imageDataUrl);
+      }
+
+      return imageDataUrl;
     } catch (err) {
       console.error('Image generation failed for segment:', err);
       return '';
@@ -486,35 +638,16 @@ Balas hanya dengan objek JSON yang diminta.`,
 
   const images = await Promise.all(imagePromises);
 
-  // Build scene segments
+  // Notify all images done
+  if (streamCallbacks?.onAllImagesReady) {
+    streamCallbacks.onAllImagesReady();
+  }
+
+  // Build final scene segments with images
   const segments = storySegments.map((seg, i) => ({
     text: seg.text,
     image: images[i] || '',
   }));
-
-  // Extract voice chat config if present
-  const voiceChat = gameStateUpdate.requiresVoiceChat && gameStateUpdate.voiceChatConfig?.characterName
-    ? {
-        characterName: gameStateUpdate.voiceChatConfig.characterName,
-        characterRole: gameStateUpdate.voiceChatConfig.characterRole,
-        voiceName: gameStateUpdate.voiceChatConfig.voiceName || 'Kore',
-        initialDialogue: gameStateUpdate.voiceChatConfig.initialDialogue,
-        systemInstruction: gameStateUpdate.voiceChatConfig.systemInstruction,
-      }
-    : null;
-
-  // Extract talkable characters if present (optional talk mode)
-  const talkableCharacters = !gameStateUpdate.requiresVoiceChat && gameStateUpdate.talkableCharacters?.length
-    ? gameStateUpdate.talkableCharacters
-        .filter(c => c.characterName) // filter out empty entries
-        .map(c => ({
-          characterName: c.characterName,
-          characterRole: c.characterRole,
-          voiceName: c.voiceName || 'Kore',
-          initialDialogue: c.initialDialogue,
-          systemInstruction: c.systemInstruction,
-        }))
-    : [];
 
   const newScene: Scene = {
     segments,
@@ -527,8 +660,6 @@ Balas hanya dengan objek JSON yang diminta.`,
     highlightCharacter: gameStateUpdate.highlightCharacter || undefined,
     backsound: gameStateUpdate.backsound || undefined,
   };
-
-  const newHistory = [...currentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];
 
   return {
     scene: newScene,

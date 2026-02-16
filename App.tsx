@@ -7,7 +7,7 @@ import { HomePage } from './components/HomePage';
 import { SettingsPage } from './components/SettingsPage';
 import { GenrePicker } from './components/GenrePicker';
 import { SavedGamesPage } from './components/SavedGamesPage';
-import { getNextScene } from './services/geminiService';
+import { getNextScene, type SceneStreamCallbacks } from './services/geminiService';
 import { putSave, generateSaveId, type SaveData } from './services/database';
 import { getSettings, saveSettings, type GameSettings } from './services/settings';
 import { audioManager, type BacksoundId } from './services/audioManager';
@@ -182,6 +182,8 @@ const App: React.FC = () => {
   const [locationVisualIdentity, setLocationVisualIdentity] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  /** Whether scene images are still being generated (streaming mode) */
+  const [imagesLoading, setImagesLoading] = useState(false);
   const [showStartLoader, setShowStartLoader] = useState(false);
   const [startFadingOut, setStartFadingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -450,6 +452,7 @@ const App: React.FC = () => {
 
   const handleChoice = useCallback(async (choice: string) => {
     setIsLoading(true);
+    setImagesLoading(true);
     setError(null);
 
     // If there are accumulated conversation logs from optional talks, prepend them to the choice
@@ -465,31 +468,67 @@ const App: React.FC = () => {
       fullChoice = `[LOG PERCAKAPAN OPSIONAL]\n${logsText}\n\n[PILIHAN PEMAIN]: ${choice}`;
     }
 
+    // Track scene index for image streaming updates
+    let streamedSceneIdx = -1;
+
+    // Streaming callbacks — show text+choices immediately, images stream in later
+    const streamCallbacks: SceneStreamCallbacks = {
+      onStoryReady: (partialScene, meta) => {
+        const newTurnCount = turnCount + 1;
+        setTurnCount(newTurnCount);
+
+        const newScenes = [...sceneHistory, partialScene];
+        streamedSceneIdx = newScenes.length - 1;
+        setSceneHistory(newScenes);
+        setCurrentSceneIndex(streamedSceneIdx);
+
+        // Update inventory: add new, remove used
+        const updatedInv = [...new Set([...inventory, ...meta.newInventory])]
+          .filter(item => !(meta.removedInventory || []).includes(item));
+        setInventory(updatedInv);
+
+        setQuests(meta.quests);
+        setStoryHistory(meta.newHistory);
+        setCharacterVisualIdentity(meta.characterVisualIdentity);
+        setLocationVisualIdentity(meta.locationVisualIdentity);
+        setIsGameOver(partialScene.isGameOver);
+        setGameOverMessage(partialScene.gameOverMessage);
+
+        // Reset conversation logs for new scene
+        setConversationLogs({});
+
+        // Loading is done for text — user can interact with choices/voice now
+        setIsLoading(false);
+      },
+
+      onImageReady: (segmentIndex, imageDataUrl) => {
+        // Update the specific segment's image in the scene history
+        setSceneHistory(prev => {
+          const updated = [...prev];
+          const targetIdx = streamedSceneIdx >= 0 ? streamedSceneIdx : updated.length - 1;
+          if (targetIdx >= 0 && targetIdx < updated.length) {
+            const scene = { ...updated[targetIdx] };
+            const segments = [...scene.segments];
+            if (segmentIndex >= 0 && segmentIndex < segments.length) {
+              segments[segmentIndex] = { ...segments[segmentIndex], image: imageDataUrl };
+              scene.segments = segments;
+              updated[targetIdx] = scene;
+            }
+          }
+          return updated;
+        });
+      },
+
+      onAllImagesReady: () => {
+        setImagesLoading(false);
+      },
+    };
+
     try {
       const result = await getNextScene(storyHistory, fullChoice, settings, {
         characterVisualIdentity,
         locationVisualIdentity,
-      }, knownCharacters);
-
-      const newTurnCount = turnCount + 1;
-      setTurnCount(newTurnCount);
-
-      const newScenes = [...sceneHistory, result.scene];
-      const newIdx = newScenes.length - 1;
-      setSceneHistory(newScenes);
-      setCurrentSceneIndex(newIdx);
-
-      // Update inventory: add new, remove used
-      const updatedInv = [...new Set([...inventory, ...result.newInventory])]
-        .filter(item => !(result.removedInventory || []).includes(item));
-      setInventory(updatedInv);
-
-      setQuests(result.quests);
-      setStoryHistory(result.newHistory);
-      setCharacterVisualIdentity(result.characterVisualIdentity);
-      setLocationVisualIdentity(result.locationVisualIdentity);
-      setIsGameOver(result.scene.isGameOver);
-      setGameOverMessage(result.scene.gameOverMessage);
+      }, knownCharacters, streamCallbacks);
 
       // Merge new character portraits with existing ones
       const updatedChars = result.newCharacterPortraits.length > 0
@@ -497,12 +536,36 @@ const App: React.FC = () => {
         : knownCharacters;
       setKnownCharacters(updatedChars);
 
-      // Reset conversation logs for new scene
-      setConversationLogs({});
-
+      // Final save with complete data (all images done)
       if (currentSaveId && settings.autoSave) {
+        // Get latest scene history ref for saving
+        const finalScenes = [...sceneHistory, result.scene];
+        // But the streaming may have already added it, so check
+        const saveIdx = streamedSceneIdx >= 0 ? streamedSceneIdx : finalScenes.length - 1;
+
+        // Update the scene at the streamed index with final images
+        setSceneHistory(prev => {
+          const updated = [...prev];
+          if (saveIdx >= 0 && saveIdx < updated.length) {
+            updated[saveIdx] = result.scene;
+          }
+          return updated;
+        });
+
+        const newTurnCount = turnCount + 1;
+        const updatedInv = [...new Set([...inventory, ...result.newInventory])]
+          .filter(item => !(result.removedInventory || []).includes(item));
+
+        // We need the final scene list for saving
+        const scenesForSave = [...sceneHistory];
+        if (saveIdx >= 0 && saveIdx < scenesForSave.length) {
+          scenesForSave[saveIdx] = result.scene;
+        } else {
+          scenesForSave.push(result.scene);
+        }
+
         await saveProgress(
-          newScenes, newIdx, updatedInv, result.quests, result.newHistory,
+          scenesForSave, saveIdx, updatedInv, result.quests, result.newHistory,
           currentSaveId, saveName, newTurnCount,
           result.scene.isGameOver, result.scene.gameOverMessage,
           result.characterVisualIdentity, result.locationVisualIdentity,
@@ -512,8 +575,9 @@ const App: React.FC = () => {
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Terjadi kesalahan yang tidak diketahui.';
       setError(`Gagal melanjutkan cerita. ${errorMessage}`);
-    } finally {
       setIsLoading(false);
+    } finally {
+      setImagesLoading(false);
     }
   }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity, conversationLogs, knownCharacters]);
 
