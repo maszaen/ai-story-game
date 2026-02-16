@@ -226,6 +226,7 @@ const App: React.FC = () => {
     charVisual: string,
     locVisual: string,
     chars: CharacterPortrait[],
+    chatLogs?: Record<string, ChatMessage[]>,
   ) => {
     const latestScene = scenes[scenes.length - 1];
     const save: SaveData = {
@@ -245,6 +246,7 @@ const App: React.FC = () => {
       characterVisualIdentity: charVisual,
       locationVisualIdentity: locVisual,
       knownCharacters: chars,
+      conversationLogs: chatLogs && Object.keys(chatLogs).length > 0 ? chatLogs : undefined,
     };
     await putSave(save);
   }, []);
@@ -274,6 +276,7 @@ const App: React.FC = () => {
     setGameOverMessage('');
     setError(null);
     setKnownCharacters([]);
+    setConversationLogs({});
     setView('game');
   }, []);
 
@@ -293,6 +296,7 @@ const App: React.FC = () => {
     setGameOverMessage(save.gameOverMessage);
     setError(null);
     setKnownCharacters(save.knownCharacters || []);
+    setConversationLogs(save.conversationLogs || {});
     setView('game');
   }, []);
 
@@ -358,7 +362,7 @@ const App: React.FC = () => {
           currentSaveId, saveName, newTurnCount,
           result.scene.isGameOver, result.scene.gameOverMessage,
           result.characterVisualIdentity, result.locationVisualIdentity,
-          updatedChars
+          updatedChars, {}
         );
       }
 
@@ -432,7 +436,7 @@ const App: React.FC = () => {
           currentSaveId, saveName, newTurnCount,
           result.scene.isGameOver, result.scene.gameOverMessage,
           result.characterVisualIdentity, result.locationVisualIdentity,
-          updatedChars
+          updatedChars, {}
         );
       }
     } catch (e) {
@@ -468,20 +472,55 @@ const App: React.FC = () => {
     } else {
       // Optional mode: store raw messages for this character so they can be restored
       if (activeVoiceChatChar) {
-        setConversationLogs(prev => ({
-          ...prev,
+        const updatedLogs = {
+          ...conversationLogs,
           [activeVoiceChatChar.characterName]: messages,
-        }));
+        };
+        setConversationLogs(updatedLogs);
+
+        // Auto-save with updated conversation logs
+        if (currentSaveId && settings.autoSave) {
+          saveProgress(
+            sceneHistory, currentSceneIndex, inventory, quests, storyHistory,
+            currentSaveId, saveName, turnCount,
+            isGameOver, gameOverMessage,
+            characterVisualIdentity, locationVisualIdentity,
+            knownCharacters, updatedLogs
+          );
+        }
       }
     }
 
     setActiveVoiceChatChar(null);
-  }, [voiceChatMode, handleChoice, activeVoiceChatChar]);
+  }, [voiceChatMode, handleChoice, activeVoiceChatChar, conversationLogs, currentSaveId, settings.autoSave, saveProgress, sceneHistory, currentSceneIndex, inventory, quests, storyHistory, saveName, turnCount, isGameOver, gameOverMessage, characterVisualIdentity, locationVisualIdentity, knownCharacters]);
 
   const handleVoiceChatCancel = useCallback(() => {
     setShowVoiceChat(false);
     setActiveVoiceChatChar(null);
   }, []);
+
+  /** Build story context summary for voice chat memory continuity */
+  const buildStoryContext = useCallback(() => {
+    if (sceneHistory.length === 0) return '';
+    // Take last 5 scenes to keep context manageable for Live API
+    const recentScenes = sceneHistory.slice(-5);
+    const startIdx = Math.max(0, sceneHistory.length - 5);
+
+    const sceneSummaries = recentScenes.map((scene, i) =>
+      `Babak ${startIdx + i + 1}: ${scene.segments.map(s => s.text).join(' ')}`
+    ).join('\n\n');
+
+    const inventoryText = inventory.length > 0
+      ? `\nInventory pemain saat ini: ${inventory.join(', ')}`
+      : '';
+
+    const activeQuests = quests.filter(q => !q.completed);
+    const questText = activeQuests.length > 0
+      ? `\nQuest aktif: ${activeQuests.map(q => q.text).join(', ')}`
+      : '';
+
+    return `${sceneSummaries}${inventoryText}${questText}`;
+  }, [sceneHistory, inventory, quests]);
 
   // HOME VIEW
   if (view === 'home') {
@@ -679,11 +718,12 @@ const App: React.FC = () => {
             {/* Voice Chat Overlay (both mandatory and optional modes) */}
             {showVoiceChat && activeVoiceChatChar && (
               <div className="voice-chat-overlay">
-                <VoiceChatPanel
+              <VoiceChatPanel
                   voiceChat={activeVoiceChatChar}
                   onComplete={handleVoiceChatComplete}
                   onCancel={handleVoiceChatCancel}
                   previousMessages={conversationLogs[activeVoiceChatChar.characterName]}
+                  storyContext={buildStoryContext()}
                 />
               </div>
             )}

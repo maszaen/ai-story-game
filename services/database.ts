@@ -1,4 +1,4 @@
-import type { Scene, QuestItem, CharacterPortrait } from '../types';
+import type { Scene, QuestItem, CharacterPortrait, ChatMessage } from '../types';
 
 const DB_NAME = 'adventure-engine-db';
 const DB_VERSION = 2;
@@ -27,6 +27,8 @@ export interface SaveData {
   locationVisualIdentity: string;
   /** Known characters with generated portraits for visual consistency */
   knownCharacters: CharacterPortrait[];
+  /** Optional NPC conversation logs for the current scene (keyed by character name) */
+  conversationLogs?: Record<string, ChatMessage[]>;
 }
 
 function openDB(): Promise<IDBDatabase> {

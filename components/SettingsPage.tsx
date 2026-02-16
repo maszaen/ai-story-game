@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { GameSettings, ArtStyle, SegmentCount, Gender } from '../services/settings';
 import { ART_STYLE_LABELS, GENDER_LABELS } from '../services/settings';
 import { setApiKey, isEnvKey, hasSessionKey } from '../services/apiKey';
+import { createBackup, restoreBackup, type BackupProgress, type RestoreProgress } from '../services/backup';
 import type { ImageSize } from './ImageSizeSelector';
-import { IconGear } from './Icons';
+import { IconGear, IconShield, IconScroll } from './Icons';
 
 interface SettingsPageProps {
   settings: GameSettings;
@@ -27,6 +28,47 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
     setApiKeyInput('');
     setKeySaved(true);
     setTimeout(() => setKeySaved(false), 2000);
+  };
+
+  // ── Backup & Restore state ──
+  const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
+  const [restoreProgress, setRestoreProgress] = useState<RestoreProgress | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isWorking = (backupProgress && backupProgress.phase !== 'done') || (restoreProgress && restoreProgress.phase !== 'done');
+
+  const handleBackup = async () => {
+    setBackupError(null);
+    setBackupProgress({ phase: 'reading', message: 'Memulai...', percent: 0 });
+    try {
+      await createBackup((p) => setBackupProgress({ ...p }));
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : 'Backup gagal.');
+      setBackupProgress(null);
+    }
+  };
+
+  const handleRestoreClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreError(null);
+    setRestoreSuccess(null);
+    setRestoreProgress({ phase: 'parsing', message: 'Memulai...', percent: 0 });
+    try {
+      const result = await restoreBackup(file, (p) => setRestoreProgress({ ...p }));
+      setRestoreSuccess(`${result.saveCount} petualangan dan ${result.imageCount} lukisan berhasil dipulihkan.`);
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : 'Restore gagal.');
+      setRestoreProgress(null);
+    }
+    // Reset file input so the same file can be selected again
+    e.target.value = '';
   };
 
   return (
@@ -223,6 +265,120 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
               {settings.autoSave ? 'Aktif' : 'Nonaktif'}
             </span>
           </button>
+        </SettingCard>
+
+        {/* Backup & Restore */}
+        <SettingCard title="Cadangan & Pemulihan" desc="Pindahkan petualanganmu ke perangkat lain. Backup menyimpan semua save beserta gambar dalam satu arsip.">
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".zip"
+            onChange={handleRestoreFile}
+            style={{ display: 'none' }}
+          />
+
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleBackup}
+              disabled={!!isWorking}
+              className={`flex-1 py-2 rounded border transition-all duration-200 flex items-center justify-center gap-2 ${
+                isWorking
+                  ? 'border-amber-900/30 bg-amber-950/10 text-amber-800/40 cursor-not-allowed'
+                  : 'border-amber-900/40 text-amber-700/60 hover:border-amber-700/60 hover:text-amber-600'
+              }`}
+              style={{ fontFamily: "'Cinzel', serif", fontSize: '0.8rem' }}
+            >
+              <IconShield size={14} /> Backup
+            </button>
+            <button
+              onClick={handleRestoreClick}
+              disabled={!!isWorking}
+              className={`flex-1 py-2 rounded border transition-all duration-200 flex items-center justify-center gap-2 ${
+                isWorking
+                  ? 'border-amber-900/30 bg-amber-950/10 text-amber-800/40 cursor-not-allowed'
+                  : 'border-amber-900/40 text-amber-700/60 hover:border-amber-700/60 hover:text-amber-600'
+              }`}
+              style={{ fontFamily: "'Cinzel', serif", fontSize: '0.8rem' }}
+            >
+              <IconScroll size={14} /> Restore
+            </button>
+          </div>
+
+          {/* Backup progress */}
+          {backupProgress && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs italic" style={{ color: 'rgba(180,160,120,0.5)', fontFamily: "'Crimson Text', serif" }}>
+                  {backupProgress.message}
+                </span>
+                <span className="text-xs" style={{ color: 'rgba(201,168,76,0.4)', fontFamily: "'Cinzel', serif" }}>
+                  {Math.round(backupProgress.percent)}%
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full overflow-hidden border border-amber-900/30" style={{ background: 'rgba(10,7,3,0.6)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${backupProgress.percent}%`,
+                    background: backupProgress.phase === 'done'
+                      ? 'linear-gradient(90deg, rgba(100,160,80,0.7), rgba(100,160,80,0.4))'
+                      : 'linear-gradient(90deg, rgba(201,168,76,0.6), rgba(201,168,76,0.25))',
+                    boxShadow: backupProgress.phase === 'done'
+                      ? '0 0 8px rgba(100,160,80,0.3)'
+                      : '0 0 8px rgba(201,168,76,0.2)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Restore progress */}
+          {restoreProgress && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs italic" style={{ color: 'rgba(180,160,120,0.5)', fontFamily: "'Crimson Text', serif" }}>
+                  {restoreProgress.message}
+                </span>
+                <span className="text-xs" style={{ color: 'rgba(201,168,76,0.4)', fontFamily: "'Cinzel', serif" }}>
+                  {Math.round(restoreProgress.percent)}%
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full overflow-hidden border border-amber-900/30" style={{ background: 'rgba(10,7,3,0.6)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${restoreProgress.percent}%`,
+                    background: restoreProgress.phase === 'done'
+                      ? 'linear-gradient(90deg, rgba(100,160,80,0.7), rgba(100,160,80,0.4))'
+                      : 'linear-gradient(90deg, rgba(201,168,76,0.6), rgba(201,168,76,0.25))',
+                    boxShadow: restoreProgress.phase === 'done'
+                      ? '0 0 8px rgba(100,160,80,0.3)'
+                      : '0 0 8px rgba(201,168,76,0.2)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Error messages */}
+          {backupError && (
+            <p className="mt-2 text-xs italic" style={{ color: 'rgba(180,80,80,0.7)', fontFamily: "'Crimson Text', serif" }}>
+              {backupError}
+            </p>
+          )}
+          {restoreError && (
+            <p className="mt-2 text-xs italic" style={{ color: 'rgba(180,80,80,0.7)', fontFamily: "'Crimson Text', serif" }}>
+              {restoreError}
+            </p>
+          )}
+
+          {/* Success message */}
+          {restoreSuccess && (
+            <p className="mt-2 text-xs italic" style={{ color: 'rgba(100,160,80,0.7)', fontFamily: "'Crimson Text', serif" }}>
+              {restoreSuccess}
+            </p>
+          )}
         </SettingCard>
 
         </div>

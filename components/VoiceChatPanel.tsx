@@ -10,11 +10,14 @@ interface VoiceChatPanelProps {
   onCancel: () => void;
   /** Previous messages to restore when re-opening a conversation */
   previousMessages?: ChatMessage[];
+  /** Story context from previous scenes for memory continuity */
+  storyContext?: string;
 }
 
 /** Local interface for the live session object (not exported from SDK) */
 interface LiveSession {
   sendRealtimeInput(input: { media: Blob }): void;
+  sendClientContent(content: { turns: Array<{ role: string; parts: Array<{ text: string }> }> }): void;
   close(): void;
 }
 
@@ -30,14 +33,34 @@ const StopIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel, previousMessages }) => {
+const KeyboardIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="14" rx="2" ry="2" />
+    <line x1="6" y1="8" x2="6.01" y2="8" />
+    <line x1="10" y1="8" x2="10.01" y2="8" />
+    <line x1="14" y1="8" x2="14.01" y2="8" />
+    <line x1="18" y1="8" x2="18.01" y2="8" />
+    <line x1="6" y1="12" x2="6.01" y2="12" />
+    <line x1="10" y1="12" x2="10.01" y2="12" />
+    <line x1="14" y1="12" x2="14.01" y2="12" />
+    <line x1="18" y1="12" x2="18.01" y2="12" />
+    <line x1="8" y1="16" x2="16" y2="16" />
+  </svg>
+);
+
+const SendIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+);
+
+export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel, previousMessages, storyContext }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(
-    previousMessages && previousMessages.length > 0
-      ? 'Lanjutkan percakapan — ketuk mikrofon'
-      : 'Ketuk mikrofon untuk mulai berdiskusi'
-  );
+  const [statusMessage, setStatusMessage] = useState('Membuka gerbang komunikasi...');
+  const isMutedRef = useRef(false);
+  const autoStartedRef = useRef(false);
   const [transcript, setTranscript] = useState<ChatMessage[]>(
     // Restore previous conversation or start fresh with initial dialogue
     previousMessages && previousMessages.length > 0
@@ -45,6 +68,9 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
       : [{ id: 0, sender: 'character', text: voiceChat.initialDialogue }]
   );
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInputValue, setTextInputValue] = useState('');
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Use a ref as the single source of truth for the streaming message
@@ -126,6 +152,11 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
       if (!apiKey) throw new Error('API Key belum diatur');
       const ai = new GoogleGenAI({ apiKey });
 
+      // Build enhanced system instruction with story context
+      const enhancedInstruction = storyContext
+        ? `${voiceChat.systemInstruction}\n\nKONTEKS CERITA SEJAUH INI (kamu HARUS ingat dan mereferensikan kejadian-kejadian ini dalam percakapan):\n${storyContext}`
+        : voiceChat.systemInstruction;
+
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       outputGainNodeRef.current = outputAudioContextRef.current.createGain();
@@ -145,6 +176,8 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
             scriptProcessorRef.current = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
 
             scriptProcessorRef.current.onaudioprocess = (ev) => {
+              // Skip sending audio when muted (keyboard mode)
+              if (isMutedRef.current) return;
               const inputData = ev.inputBuffer.getChannelData(0);
               const pcmBlob = createPcmBlob(inputData);
               sessionPromiseRef.current!.then((session) => {
@@ -236,19 +269,23 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceChat.voiceName } },
           },
-          systemInstruction: voiceChat.systemInstruction,
+          systemInstruction: enhancedInstruction,
         },
       });
     } catch (error) {
       console.error('Failed to start voice chat:', error);
       setStatusMessage('Gagal mengakses mikrofon. Periksa izin browser.');
     }
-  }, [voiceChat, stopSession, commitStreaming]);
+  }, [voiceChat, stopSession, commitStreaming, storyContext]);
 
-  // Cleanup on unmount
+  // Auto-start session on mount, cleanup on unmount
   useEffect(() => {
+    if (!autoStartedRef.current) {
+      autoStartedRef.current = true;
+      startSession();
+    }
     return () => { stopSession(); };
-  }, [stopSession]);
+  }, [startSession, stopSession]);
 
   const handleEndDiscussion = useCallback(() => {
     // Commit any pending streaming message before compiling
@@ -288,6 +325,48 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
     }
   };
 
+  const handleToggleTextInput = () => {
+    const newShowTextInput = !showTextInput;
+    setShowTextInput(newShowTextInput);
+    // Mute mic when keyboard is shown, unmute when hidden
+    isMutedRef.current = newShowTextInput;
+    if (newShowTextInput) {
+      setStatusMessage('Mikrofon dibisukan — mode ketik aktif');
+      setTimeout(() => textInputRef.current?.focus(), 50);
+    } else {
+      setStatusMessage('Berbicara...');
+    }
+  };
+
+  const handleSendText = useCallback(async () => {
+    const text = textInputValue.trim();
+    if (!text) return;
+
+    // Add user message to transcript
+    const userMsg: ChatMessage = { id: Date.now(), sender: 'user', text };
+    setTranscript(t => [...t, userMsg]);
+    setTextInputValue('');
+
+    // Send to live session if active
+    if (sessionPromiseRef.current) {
+      try {
+        const session = await sessionPromiseRef.current;
+        session.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text }] }],
+        });
+      } catch (e) {
+        console.error('Failed to send text to session:', e);
+      }
+    }
+  }, [textInputValue]);
+
+  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendText();
+    }
+  };
+
   const characterInitial = voiceChat.characterName.charAt(0).toUpperCase();
 
   return (
@@ -301,7 +380,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
           <span className="voice-chat-name">{voiceChat.characterName}</span>
           <span className="voice-chat-role">{voiceChat.characterRole}</span>
         </div>
-        {hasStarted && (
+        {isSessionActive && (
           <button
             onClick={handleEndDiscussion}
             className="voice-chat-end-btn"
@@ -309,7 +388,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
             Selesai Berdiskusi →
           </button>
         )}
-        {!hasStarted && (
+        {!isSessionActive && !hasStarted && (
           <button
             onClick={onCancel}
             className="voice-chat-back-btn"
@@ -349,17 +428,57 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
         <div ref={chatEndRef} />
       </div>
 
+      {/* Text Input Form */}
+      {showTextInput && (
+        <div className="vc-text-input-panel">
+          <div className="vc-text-input-wrapper">
+            <textarea
+              ref={textInputRef}
+              className="vc-text-input"
+              value={textInputValue}
+              onChange={e => setTextInputValue(e.target.value)}
+              onKeyDown={handleTextKeyDown}
+              placeholder="Tulis pesanmu di sini..."
+              rows={2}
+            />
+            <button
+              className="vc-text-send-btn"
+              onClick={handleSendText}
+              disabled={!textInputValue.trim()}
+              title="Kirim pesan (Enter)"
+            >
+              <SendIcon size={18} />
+            </button>
+          </div>
+          <span className="vc-text-hint">Enter kirim · Shift+Enter baris baru</span>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="voice-chat-controls">
         <span className="voice-chat-status">{statusMessage}</span>
         <div className="voice-chat-actions">
+          {/* Keyboard button — only visible when session is active */}
+          {isSessionActive && (
+            <button
+              onClick={handleToggleTextInput}
+              className={`vc-keyboard-btn vc-btn-reveal ${showTextInput ? 'vc-keyboard-active' : ''}`}
+              title={showTextInput ? 'Kembali ke suara (unmute)' : 'Ketik pesan (mute mikrofon)'}
+            >
+              {showTextInput ? <MicIcon size={20} /> : <KeyboardIcon size={20} />}
+            </button>
+          )}
           <button
             onClick={handleToggleSession}
-            className={`voice-chat-mic-btn ${isSessionActive ? 'vc-mic-active' : ''}`}
-            title={isSessionActive ? 'Hentikan mikrofon' : 'Mulai berbicara'}
+            className={`voice-chat-mic-btn ${isSessionActive ? 'vc-mic-active' : ''} ${showTextInput ? 'vc-mic-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-connecting' : ''}`}
+            title={isSessionActive ? 'Hentikan sesi' : 'Mulai berbicara'}
+            disabled={hasStarted && !isSessionActive}
           >
-            <div className={`voice-chat-mic-inner ${isSessionActive ? 'vc-mic-inner-active' : ''}`}>
-              {isSessionActive ? <StopIcon size={24} /> : <MicIcon size={24} />}
+            <div className={`voice-chat-mic-inner ${isSessionActive ? 'vc-mic-inner-active' : ''} ${showTextInput ? 'vc-mic-inner-muted' : ''} ${hasStarted && !isSessionActive ? 'vc-mic-inner-connecting' : ''}`}>
+              {hasStarted && !isSessionActive
+                ? <div className="vc-mic-loader" />
+                : isSessionActive ? <StopIcon size={24} /> : <MicIcon size={24} />
+              }
             </div>
           </button>
         </div>

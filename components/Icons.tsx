@@ -138,6 +138,21 @@ export const IconBack = (props: IconProps) => svg(
   props
 );
 
+/** Keyboard */
+export const IconKeyboard = (props: IconProps) => svgFill(
+  <>
+    <rect x="2" y="4" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="1.8"/>
+    <path d="M6 8h.01 M10 8h.01 M14 8h.01 M18 8h.01 M6 12h.01 M10 12h.01 M14 12h.01 M18 12h.01 M8 16h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </>,
+  props
+);
+
+/** Send arrow */
+export const IconSend = (props: IconProps) => svg(
+  'M22 2L11 13 M22 2l-7 20-4-9-9-4z',
+  props
+);
+
 // ─── Genre Icons ────────────────────────────────────────
 
 /** Castle / Fantasy */
