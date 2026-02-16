@@ -45,7 +45,7 @@ export interface GameStateUpdate {
   isGameOver: boolean;
   /** Short game-over message when isGameOver is true */
   gameOverMessage: string;
-  /** Whether this scene requires a voice chat with an NPC instead of choices */
+  /** Whether this scene requires a MANDATORY voice chat with an NPC instead of choices */
   requiresVoiceChat: boolean;
   /** Voice chat configuration — only populated when requiresVoiceChat is true */
   voiceChatConfig: {
@@ -55,6 +55,16 @@ export interface GameStateUpdate {
     initialDialogue: string;
     systemInstruction: string;
   };
+  /** Optional: NPCs the player can OPTIONALLY talk to alongside normal choices.
+   *  When populated, choices are shown normally AND talk buttons appear for each character.
+   *  Mutually exclusive with requiresVoiceChat=true. */
+  talkableCharacters: {
+    characterName: string;
+    characterRole: string;
+    voiceName: string;
+    initialDialogue: string;
+    systemInstruction: string;
+  }[];
 }
 
 export interface Scene {
@@ -66,6 +76,8 @@ export interface Scene {
   choices: Choice[];
   isGameOver: boolean;
   gameOverMessage: string;
-  /** Voice chat configuration when this scene requires NPC conversation */
+  /** Voice chat configuration when this scene requires MANDATORY NPC conversation */
   voiceChat?: VoiceChatConfig | null;
+  /** NPCs the player can optionally talk to (shown alongside choices) */
+  talkableCharacters?: VoiceChatConfig[];
 }

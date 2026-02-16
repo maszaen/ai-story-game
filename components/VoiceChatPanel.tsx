@@ -6,8 +6,10 @@ import { decodeBase64ToBytes, decodeAudioData, createPcmBlob } from '../services
 
 interface VoiceChatPanelProps {
   voiceChat: VoiceChatConfig;
-  onComplete: (conversationSummary: string) => void;
+  onComplete: (conversationSummary: string, messages: ChatMessage[]) => void;
   onCancel: () => void;
+  /** Previous messages to restore when re-opening a conversation */
+  previousMessages?: ChatMessage[];
 }
 
 /** Local interface for the live session object (not exported from SDK) */
@@ -28,14 +30,20 @@ const StopIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel }) => {
+export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel, previousMessages }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('Ketuk mikrofon untuk mulai berdiskusi');
-  const [transcript, setTranscript] = useState<ChatMessage[]>([
-    // Pre-populate with character's initial dialogue
-    { id: 0, sender: 'character', text: voiceChat.initialDialogue },
-  ]);
+  const [statusMessage, setStatusMessage] = useState(
+    previousMessages && previousMessages.length > 0
+      ? 'Lanjutkan percakapan — ketuk mikrofon'
+      : 'Ketuk mikrofon untuk mulai berdiskusi'
+  );
+  const [transcript, setTranscript] = useState<ChatMessage[]>(
+    // Restore previous conversation or start fresh with initial dialogue
+    previousMessages && previousMessages.length > 0
+      ? previousMessages
+      : [{ id: 0, sender: 'character', text: voiceChat.initialDialogue }]
+  );
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -267,7 +275,8 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
       `[Pemain berdiskusi langsung dengan ${voiceChat.characterName} (${voiceChat.characterRole})]\n` +
       `${voiceChat.characterName} memulai percakapan: "${voiceChat.initialDialogue}"\n\n` +
       `Isi diskusi:\n${transcriptText}\n\n` +
-      `[Diskusi selesai — lanjutkan cerita berdasarkan hasil percakapan dan keputusan yang dibuat di atas]`
+      `[Diskusi selesai — lanjutkan cerita berdasarkan hasil percakapan dan keputusan yang dibuat di atas]`,
+      allMessages
     );
   }, [voiceChat, onComplete, stopSession, commitStreaming]);
 

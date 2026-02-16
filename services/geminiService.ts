@@ -14,7 +14,7 @@ const storyResponseSchema = {
   properties: {
     sceneVisualContext: {
       type: Type.STRING,
-      description: "A shared visual description for ALL images in this turn. Describe the current location/environment in detail: time of day, weather, lighting, atmosphere, key environmental features. This will be prepended to every image prompt to ensure visual consistency across all segments. Write in English. Example: 'Dense ancient forest at twilight, thick fog between massive gnarled oak trees, bioluminescent mushrooms casting blue-green glow on mossy ground, shafts of dying orange sunlight filtering through canopy'",
+      description: "A shared, EXHAUSTIVELY DETAILED visual description for ALL images in this turn. This is the SINGLE SOURCE OF TRUTH for the environment — every image uses this, so it must be complete enough that two different artists would draw nearly identical backgrounds. Include ALL of the following: (1) Location type & layout — spatial arrangement of key structures/objects (what is left, right, center, foreground, background), (2) Time of day & sky — exact lighting direction, sun/moon position, sky color gradients, (3) Weather & atmosphere — fog density, rain, dust, humidity, visibility range, (4) Color palette — dominant colors of walls, ground, vegetation, structures (e.g. 'rust-red brick walls', 'pale grey cobblestone road'), (5) Primary objects — every significant object with color, material, size, position (e.g. 'tall black iron gate center-frame, flanked by two stone pillars with moss'), (6) Secondary objects — smaller details that establish atmosphere (lanterns, crates, puddles, cracks, vines, signs), (7) Lighting sources — where light comes from, what it illuminates, shadow directions. Write in English. Minimum 4-6 sentences. Example: 'Military compound entrance at night. A tall 4-meter black iron gate with vertical bars stands center, flanked by two concrete guard towers with mounted searchlights casting harsh white cones downward. Sandbag barricades line both sides of a cracked asphalt road leading to the gate. Three armed guards in dark green uniforms stand behind the gate. Red warning signs on the fence read RESTRICTED. Barbed wire coils along the top of a 3-meter concrete wall extending left and right. Dim amber floodlights mounted on the wall cast long shadows. Overcast sky, no stars visible, faint drizzle.'",
     },
     characterVisualIdentity: {
       type: Type.STRING,
@@ -36,7 +36,7 @@ const storyResponseSchema = {
           },
           imagePrompt: {
             type: Type.STRING,
-            description: "A highly detailed visual description that PRECISELY depicts what happens in the 'text' field of this segment. This prompt MUST be a faithful visual translation of the narrative — every key action, object, interaction, gesture, and emotion mentioned in the text MUST appear in this prompt. Do NOT repeat scene setting or character base appearance (already in sceneVisualContext/characterVisualIdentity). Instead, focus on: (1) EXACT actions & body language (e.g. 'looking down at a silver wristwatch on left wrist, eyes focused on the watch face'), (2) facial expressions & emotions, (3) specific objects being interacted with and HOW they are being used, (4) spatial relationship between characters (who is where, looking at what), (5) camera angle & shot type (close-up, medium shot, over-the-shoulder, etc.), (6) any temporary visual elements (blood, tears, glowing effects, held items). Be extremely literal and specific — if the text says someone looks at a watch, the prompt MUST show them looking at a watch. Write in English. Minimum 2-3 sentences.",
+            description: "A hyper-detailed visual direction that PRECISELY depicts the 'text' of this segment like a movie storyboard frame. This is NOT a vague description — it is a PRECISE CAMERA SHOT INSTRUCTION. CRITICAL RULES: (1) CAMERA PLACEMENT IN SCENE — state WHERE the camera is physically positioned within the environment. Not just 'wide shot' but 'camera inside the pharmacy near the back shelves, looking toward the entrance' or 'camera at street level 5 meters in front of the gate, looking up'. The camera position determines what the viewer sees as foreground/background — be explicit. If the narrative says the character is INSIDE a building, the camera MUST be inside too, not outside looking in. (2) CHARACTER LOCATION ACCURACY — the image MUST show the character at the EXACT location the narrative describes. If the text says 'sudah di dalam apotek' (already inside the pharmacy), the character MUST be depicted inside the pharmacy surrounded by shelves and medicine, NOT at the door or outside approaching. If the text says 'berdiri di tepi jurang' (standing at cliff edge), show them AT the edge, not walking toward it. Match the narrative's spatial state precisely. (3) CHARACTER FACING DIRECTION — state EXACTLY which direction each character faces relative to the camera AND relative to objects/other characters. Ask yourself: logically, what would the character be looking at in this moment? If they just arrived at a gate, they face AWAY from camera TOWARD the gate. If they talk to someone, they face THAT person. NEVER default to 'facing camera' unless the narrative justifies it. Use terms like 'back to camera facing the gate', 'turned left looking at the merchant', 'side profile facing right', 'three-quarter view looking over shoulder'. (4) CHARACTER-ENVIRONMENT SPATIAL RELATION — describe where each character is positioned relative to key environment objects. E.g. 'standing behind the wooden counter', 'leaning against the left wall next to the window', 'crouching beside the overturned cart'. Characters must be ANCHORED to their environment, not floating in space. (5) BODY POSE & GESTURE — exact limb positions (e.g. 'right hand raised palm-forward in a stop gesture', 'crouching with left knee on ground, right hand gripping sword handle'). (6) CAMERA ANGLE — shot type (extreme close-up, close-up, medium, full body, wide establishing, bird's eye, low angle, over-the-shoulder) AND camera height (eye level, low, high). (7) INTERACTION DETAILS — if touching/holding/using an object, describe exactly how (which hand, grip type, distance). (8) TEMPORARY VISUAL FX — blood, tears, glow, sparks, motion blur, dust kicked up, breath vapor. Do NOT repeat scene setting or character base appearance. Write in English. Minimum 3-4 sentences.",
           },
         },
         required: ['text', 'imagePrompt'],
@@ -105,7 +105,7 @@ const storyResponseSchema = {
     },
     voiceChatConfig: {
       type: Type.OBJECT,
-      description: "Configuration for voice chat with an NPC. Only meaningful when requiresVoiceChat is true. When requiresVoiceChat is false, fill all fields with empty strings.",
+      description: "Configuration for MANDATORY voice chat with an NPC. Only meaningful when requiresVoiceChat is true. When requiresVoiceChat is false, fill all fields with empty strings.",
       properties: {
         characterName: {
           type: Type.STRING,
@@ -130,8 +130,38 @@ const storyResponseSchema = {
       },
       required: ['characterName', 'characterRole', 'voiceName', 'initialDialogue', 'systemInstruction'],
     },
+    talkableCharacters: {
+      type: Type.ARRAY,
+      description: "Array of NPC characters the player can OPTIONALLY talk to in this scene. Use this when NPCs are present and talking to them would ADD VALUE but is NOT required. When this is populated, choices MUST also have 3 normal choices. This is mutually exclusive with requiresVoiceChat=true. When requiresVoiceChat=true OR no NPCs are present, this MUST be an empty array []. Use this when: the scene has interesting NPCs like merchants, companions, quest-givers, informants, etc. Multiple NPCs can be listed. Use approximately every 2-4 scenes when NPCs are naturally present.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          characterName: {
+            type: Type.STRING,
+            description: "The NPC character's name.",
+          },
+          characterRole: {
+            type: Type.STRING,
+            description: "Brief description of who this character is, in Indonesian.",
+          },
+          voiceName: {
+            type: Type.STRING,
+            description: "Voice for this character. Must be one of: Zephyr, Puck, Charon, Kore, Fenrir.",
+          },
+          initialDialogue: {
+            type: Type.STRING,
+            description: "Character's greeting/opening line in Indonesian.",
+          },
+          systemInstruction: {
+            type: Type.STRING,
+            description: "System instruction for the voice AI to roleplay this character. Same format as voiceChatConfig.systemInstruction but for an optional side conversation. The character should be helpful and share information relevant to the scene but NOT make major plot decisions for the player.",
+          },
+        },
+        required: ['characterName', 'characterRole', 'voiceName', 'initialDialogue', 'systemInstruction'],
+      },
+    },
   },
-  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig'],
+  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig', 'talkableCharacters'],
 };
 
 export const getNextScene = async (
@@ -185,17 +215,28 @@ ATURAN PENTING:
 - Setiap segmen harus punya image prompt yang detail untuk momen spesifik itu.
 
 ATURAN KONSISTENSI VISUAL (SANGAT PENTING):
-- Isi "sceneVisualContext" dengan deskripsi LENGKAP setting visual untuk seluruh scene ini: lokasi, waktu, cuaca, pencahayaan, atmosfer, detail lingkungan. Tulis dalam bahasa Inggris. Ini akan digunakan untuk SEMUA gambar di scene ini agar konsisten.
-- Isi "characterVisualIdentity" dengan deskripsi DETAIL penampilan karakter utama: umur, gender, rambut (warna, gaya, panjang), warna mata, warna kulit, pakaian/armor detail, aksesoris, senjata, ciri khas. Tulis dalam bahasa Inggris. PERTAHANKAN deskripsi ini PERSIS SAMA antar giliran kecuali ada perubahan nyata (ganti baju, terluka, transformasi).
-- Isi "locationVisualIdentity" dengan deskripsi lokasi saat ini dan fitur visual kuncinya. Tulis dalam bahasa Inggris. Update HANYA jika karakter pindah ke lokasi yang secara signifikan berbeda.
+- Isi "sceneVisualContext" dengan deskripsi SUPER DETAIL setting visual untuk seluruh scene ini. Bayangkan kamu memberikan brief ke art director film — harus cukup detail sehingga dua seniman berbeda menghasilkan gambar yang hampir identik. Wajib mencakup:
+  * Layout spasial lokasi (apa di kiri, kanan, tengah, depan, belakang)
+  * Waktu, pencahayaan (arah cahaya, sumber, warna), cuaca
+  * WARNA spesifik setiap objek utama (jangan cuma 'gate' tapi 'tall black iron gate with vertical bars')
+  * Objek primer DAN sekunder (tanda, tong, batu, tanaman, dll)
+  * MINIMAL 4-6 kalimat dalam bahasa Inggris.
+- Isi "characterVisualIdentity" dengan deskripsi DETAIL penampilan karakter utama: umur, gender, rambut (warna, gaya, panjang), warna mata, warna kulit, pakaian/armor detail (warna spesifik!), aksesoris, senjata, ciri khas. Tulis dalam bahasa Inggris. PERTAHANKAN deskripsi ini PERSIS SAMA antar giliran kecuali ada perubahan nyata (ganti baju, terluka, transformasi).
+- Isi "locationVisualIdentity" dengan deskripsi lokasi saat ini dan fitur visual kuncinya termasuk WARNA dan MATERIAL. Tulis dalam bahasa Inggris. Update HANYA jika karakter pindah ke lokasi yang secara signifikan berbeda.
 - Untuk "imagePrompt" di setiap segmen: ini adalah instruksi KRITIS.
-  * imagePrompt HARUS merupakan terjemahan visual yang PERSIS dari apa yang diceritakan di "text" segmen itu.
-  * SETIAP aksi, objek, interaksi, dan gestur yang disebut di narasi WAJIB muncul di imagePrompt.
-  * Contoh BENAR: text="Dia melihat jam tangan, Eliot tersenyum" → imagePrompt="Close-up shot, the main character looking down at a silver wristwatch on their left wrist, Eliot standing beside them with a warm smile, watching them check the time"
-  * Contoh SALAH: text="Dia melihat jam tangan, Eliot tersenyum" → imagePrompt="Two young men smiling together" (TIDAK ADA jam tangan!)
-  * Sertakan: pose tubuh yang spesifik, ekspresi wajah, objek yang sedang digunakan/dilihat/dipegang, posisi spasial antar karakter, sudut kamera (close-up/medium/wide shot).
+  * imagePrompt HARUS merupakan instruksi STORYBOARD FRAME yang presisi — bukan deskripsi samar, tapi arahan kamera film.
+  * POSISI KAMERA DI SCENE: Jangan cuma tulis shot type — tulis juga DIMANA kamera ditempatkan di dalam scene. Contoh: 'camera inside the pharmacy behind the counter, looking toward the entrance' atau 'camera at street level, 10 meters from the gate, looking up at the watchtower'. Kalau narasi bilang karakter SUDAH DI DALAM ruangan, kamera HARUS di dalam juga.
+  * LOKASI KARAKTER SESUAI NARASI: Gambar HARUS menunjukkan karakter di lokasi PERSIS yang narasi sebutkan. Kalau narasi bilang 'sudah di dalam apotek', karakter HARUS dikelilingi rak obat di dalam apotek — BUKAN masih di pintu atau di luar. Kalau narasi bilang 'berdiri di tepi jurang', tampilkan dia DI TEPI jurang, bukan berjalan ke arah jurang.
+  * RELASI KARAKTER-ENVIRONMENT: Deskripsikan posisi karakter relatif terhadap objek environment. Contoh: 'standing behind the wooden counter', 'leaning against the left wall beside the window', 'crouching next to the overturned cart'. Karakter harus TERHUBUNG dengan lingkungannya.
+  * ARAH HADAP KARAKTER adalah kesalahan paling umum! Tanyakan: secara logika, ke mana karakter melihat di momen ini? Jika baru tiba di gerbang → karakter MEMBELAKANGI kamera menghadap gerbang. Jika berbicara dengan seseorang → menghadap orang itu. JANGAN PERNAH default ke 'menghadap kamera' kecuali narasi secara eksplisit memerlukan itu.
+  * Gunakan istilah arah: 'back to camera facing the gate', 'turned left toward the merchant', 'side profile facing right', 'three-quarter view looking over left shoulder'.
+  * Contoh BENAR: text="Mereka tiba di gerbang militer yang dijaga ketat" → imagePrompt="Wide establishing shot, camera at ground level 8 meters behind the characters. The main character and companion seen from behind, walking toward a tall black iron military gate 15 meters ahead, their backs to camera, the character's right hand raised to shield eyes from a harsh searchlight beam from the guard tower above the gate, two armed guards visible as silhouettes behind the gate bars, dust kicked up by their footsteps"
+  * Contoh SALAH: text="Mereka tiba di gerbang militer" → imagePrompt="The main character standing in front of a military gate, looking at the camera" (SALAH! Baru tiba berarti menghadap gerbang, bukan kamera! Dan tidak ada posisi kamera!)
+  * Contoh BENAR: text="Di dalam apotek, dia bertanya pada apoteker" → imagePrompt="Medium shot, camera inside the pharmacy positioned between two tall medicine shelves, looking toward the front counter. The main character stands in center-frame in front of the counter, leaning slightly forward with both hands resting on the glass countertop, facing the pharmacist across the counter. The pharmacist (elderly woman with white coat) stands behind the counter, gesturing with right hand toward the shelves behind her. Fluorescent lights overhead cast even white lighting."
+  * Contoh SALAH: text="Di dalam apotek, dia bertanya pada apoteker" → imagePrompt="The main character at the entrance of a pharmacy" (SALAH! Narasi bilang DI DALAM, bukan di pintu masuk!)
+  * Sertakan: pose tubuh spesifik (posisi tangan, kaki), ekspresi wajah, objek yang digunakan, posisi spasial (left-frame/center/right-frame/foreground/background), sudut kamera (shot type + ketinggian + posisi di scene).
   * JANGAN ulangi deskripsi setting atau penampilan dasar karakter (sudah ada di sceneVisualContext dan characterVisualIdentity).
-  * Tulis minimal 2-3 kalimat dalam bahasa Inggris.${visualIdentityContext}
+  * Tulis minimal 3-4 kalimat dalam bahasa Inggris.${visualIdentityContext}
 
 ATURAN INVENTORY:
 - Inventory HANYA berisi item yang BENAR-BENAR sudah dimiliki/diambil pemain.
@@ -214,19 +255,33 @@ ATURAN GAME OVER:
 - Jika isGameOver=true, choices HARUS kosong [].
 
 FITUR DISKUSI SUARA (VOICE CHAT) DENGAN KARAKTER NPC:
-- Dalam beberapa scene, alih-alih memberikan 3 pilihan teks, kamu bisa membuat scene yang memerlukan DISKUSI LANGSUNG pemain dengan karakter NPC melalui suara.
-- Set requiresVoiceChat=true jika scene ini secara alami membutuhkan percakapan langsung: merencanakan strategi bersama, negosiasi, interogasi, curhat/dialog emosional, bertanya arah/informasi penting, atau pengambilan keputusan kolaboratif.
-- Jika requiresVoiceChat=true: choices HARUS kosong [], dan voiceChatConfig HARUS diisi LENGKAP.
-- Jika requiresVoiceChat=false: berikan choices normal (3 pilihan), dan voiceChatConfig diisi string kosong untuk semua field.
-- Gunakan fitur ini secara SEIMBANG — kira-kira 1 dari setiap 3-5 scene. Jangan terlalu sering, tapi jangan juga terlalu jarang. Gunakan pada momen narasi yang tepat untuk meningkatkan imersi.
+Ada DUA mode interaksi suara dengan NPC:
+
+**MODE 1: DISKUSI WAJIB (requiresVoiceChat=true)**
+- Digunakan ketika scene MEMBUTUHKAN percakapan langsung sebelum cerita bisa lanjut.
+- Contoh: merencanakan strategi bersama, negosiasi kritis, interogasi, dialog emosional penting.
+- Jika requiresVoiceChat=true: choices HARUS kosong [], voiceChatConfig HARUS diisi LENGKAP, talkableCharacters HARUS kosong [].
+- Gunakan ini kira-kira 1 dari setiap 4-6 scene pada momen narasi yang tepat.
+
+**MODE 2: PERCAKAPAN OPSIONAL (talkableCharacters)**
+- Digunakan ketika ada NPC menarik di scene yang BISA diajak bicara tapi TIDAK WAJIB.
+- Contoh: pedagang yang bisa ditanya soal barang, teman seperjalanan yang bisa dimintai saran, penduduk desa yang punya informasi.
+- Jika talkableCharacters diisi: choices HARUS tetap ada (3 pilihan normal), requiresVoiceChat HARUS false, voiceChatConfig diisi string kosong.
+- Bisa ada LEBIH DARI SATU karakter dalam array talkableCharacters (misal: pedagang DAN penjaga gerbang).
+- Gunakan ini kira-kira setiap 2-4 scene ketika ada NPC yang secara alami hadir di scene.
+- Pemain bisa memilih untuk berbicara dengan karakter-karakter ini SEBELUM memilih salah satu dari 3 choices, atau langsung memilih tanpa bicara.
+
+**ATURAN UMUM KEDUA MODE:**
 - JANGAN gunakan voice chat di scene pertama (scene pembuka/intro).
 - voiceName: Pilih suara sesuai gender dan kepribadian karakter:
   * Perempuan: Kore (tenang/bijak), Zephyr (energik/ceria)
   * Laki-laki: Fenrir (dalam/berwibawa), Charon (misterius/gelap), Puck (ramah/cerdas)
-- Untuk systemInstruction di voiceChatConfig: tulis panduan LENGKAP agar AI suara bisa memerankan karakter ini dengan sempurna. Sertakan kepribadian, pengetahuan karakter, konteks situasi, hubungan dengan pemain, tujuan percakapan, dan kapan harus mengakhiri diskusi.
+- Untuk systemInstruction: tulis panduan LENGKAP agar AI suara bisa memerankan karakter ini dengan sempurna. Sertakan kepribadian, pengetahuan karakter, konteks situasi, hubungan dengan pemain, tujuan percakapan, dan kapan harus mengakhiri diskusi.
+- requiresVoiceChat dan talkableCharacters TIDAK BOLEH aktif bersamaan. Pilih salah satu atau tidak keduanya.
 
 MENANGANI INPUT DISKUSI SUARA:
-- Jika input pemain berupa transkrip diskusi suara (ditandai dengan [Pemain berdiskusi langsung dengan ...]), lanjutkan cerita berdasarkan HASIL diskusi tersebut.
+- Jika input pemain berupa transkrip diskusi suara (ditandai dengan [Pemain berdiskusi langsung dengan ...] atau [Percakapan opsional dengan ...]), lanjutkan cerita berdasarkan HASIL diskusi tersebut.
+- Jika ada BEBERAPA log percakapan opsional (ditandai [LOG PERCAKAPAN OPSIONAL]), gunakan SEMUA informasi dari percakapan-percakapan tersebut untuk memengaruhi narasi.
 - Gunakan keputusan/rencana yang dibuat dalam diskusi untuk menentukan arah cerita selanjutnya.
 - Referensikan percakapan yang terjadi di narasi (misal: 'Setelah berdiskusi panjang dengan Eliot, mereka memutuskan untuk...').
 
@@ -307,12 +362,26 @@ Balas hanya dengan objek JSON yang diminta.`,
       }
     : null;
 
+  // Extract talkable characters if present (optional talk mode)
+  const talkableCharacters = !gameStateUpdate.requiresVoiceChat && gameStateUpdate.talkableCharacters?.length
+    ? gameStateUpdate.talkableCharacters
+        .filter(c => c.characterName) // filter out empty entries
+        .map(c => ({
+          characterName: c.characterName,
+          characterRole: c.characterRole,
+          voiceName: c.voiceName || 'Kore',
+          initialDialogue: c.initialDialogue,
+          systemInstruction: c.systemInstruction,
+        }))
+    : [];
+
   const newScene: Scene = {
     segments,
     choices,
     isGameOver,
     gameOverMessage: gameOverMessage || '',
     voiceChat,
+    talkableCharacters: talkableCharacters.length > 0 ? talkableCharacters : undefined,
   };
 
   const newHistory = [...currentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];

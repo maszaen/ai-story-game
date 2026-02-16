@@ -11,7 +11,7 @@ import { getNextScene } from './services/geminiService';
 import { putSave, generateSaveId, type SaveData } from './services/database';
 import { getSettings, saveSettings, type GameSettings } from './services/settings';
 import { IconBook, IconSwords, IconScroll } from './components/Icons';
-import type { Scene, QuestItem } from './types';
+import type { Scene, QuestItem, VoiceChatConfig, ChatMessage } from './types';
 import type { Genre } from './constants';
 
 type AppView = 'home' | 'settings' | 'genre-picker' | 'saved-games' | 'game';
@@ -189,6 +189,12 @@ const App: React.FC = () => {
   const storyScrollRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showVoiceChat, setShowVoiceChat] = useState(false);
+  /** Which voice chat mode is active: 'mandatory' (no choices) or 'optional' (alongside choices) */
+  const [voiceChatMode, setVoiceChatMode] = useState<'mandatory' | 'optional'>('mandatory');
+  /** The character config currently being talked to */
+  const [activeVoiceChatChar, setActiveVoiceChatChar] = useState<VoiceChatConfig | null>(null);
+  /** Accumulated conversation messages per character (keyed by characterName) for optional talks */
+  const [conversationLogs, setConversationLogs] = useState<Record<string, ChatMessage[]>>({});
 
   // Scroll story to top when scene changes
   useEffect(() => {
@@ -361,8 +367,21 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    // If there are accumulated conversation logs from optional talks, prepend them to the choice
+    let fullChoice = choice;
+    const logEntries = Object.entries(conversationLogs) as [string, ChatMessage[]][];
+    if (logEntries.length > 0) {
+      const logsText = logEntries.map(([charName, messages]) => {
+        const textParts = messages.filter((_, i) => i > 0)
+          .map(m => `${m.sender === 'user' ? 'Pemain' : charName}: ${m.text}`)
+          .join('\n');
+        return `[Percakapan opsional dengan ${charName}]\n${textParts}`;
+      }).join('\n\n');
+      fullChoice = `[LOG PERCAKAPAN OPSIONAL]\n${logsText}\n\n[PILIHAN PEMAIN]: ${choice}`;
+    }
+
     try {
-      const result = await getNextScene(storyHistory, choice, settings, {
+      const result = await getNextScene(storyHistory, fullChoice, settings, {
         characterVisualIdentity,
         locationVisualIdentity,
       });
@@ -387,6 +406,9 @@ const App: React.FC = () => {
       setIsGameOver(result.scene.isGameOver);
       setGameOverMessage(result.scene.gameOverMessage);
 
+      // Reset conversation logs for new scene
+      setConversationLogs({});
+
       if (currentSaveId && settings.autoSave) {
         await saveProgress(
           newScenes, newIdx, updatedInv, result.quests, result.newHistory,
@@ -401,20 +423,46 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity]);
+  }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity, conversationLogs]);
 
+  /** Start mandatory voice chat (existing behavior) */
   const handleStartVoiceChat = useCallback(() => {
+    if (currentScene?.voiceChat) {
+      setActiveVoiceChatChar(currentScene.voiceChat);
+      setVoiceChatMode('mandatory');
+      setShowVoiceChat(true);
+    }
+  }, [currentScene]);
+
+  /** Start optional voice chat with a specific talkable character */
+  const handleStartOptionalTalk = useCallback((character: VoiceChatConfig) => {
+    setActiveVoiceChatChar(character);
+    setVoiceChatMode('optional');
     setShowVoiceChat(true);
   }, []);
 
-  const handleVoiceChatComplete = useCallback((conversationSummary: string) => {
+  const handleVoiceChatComplete = useCallback((conversationSummary: string, messages: ChatMessage[]) => {
     setShowVoiceChat(false);
-    // Feed the conversation transcript as the next "choice" to continue the story
-    handleChoice(conversationSummary);
-  }, [handleChoice]);
+
+    if (voiceChatMode === 'mandatory') {
+      // Mandatory mode: feed transcript as the next "choice" to continue story
+      handleChoice(conversationSummary);
+    } else {
+      // Optional mode: store raw messages for this character so they can be restored
+      if (activeVoiceChatChar) {
+        setConversationLogs(prev => ({
+          ...prev,
+          [activeVoiceChatChar.characterName]: messages,
+        }));
+      }
+    }
+
+    setActiveVoiceChatChar(null);
+  }, [voiceChatMode, handleChoice, activeVoiceChatChar]);
 
   const handleVoiceChatCancel = useCallback(() => {
     setShowVoiceChat(false);
+    setActiveVoiceChatChar(null);
   }, []);
 
   // HOME VIEW
@@ -600,18 +648,22 @@ const App: React.FC = () => {
                     onBackToMenu={handleBackToMenu}
                     voiceChat={currentScene?.voiceChat}
                     onStartVoiceChat={handleStartVoiceChat}
+                    talkableCharacters={currentScene?.talkableCharacters}
+                    onStartOptionalTalk={handleStartOptionalTalk}
+                    conversationLogs={conversationLogs}
                   />
                 </div>
               </div>
             )}
 
-            {/* Voice Chat Overlay */}
-            {showVoiceChat && currentScene?.voiceChat && (
+            {/* Voice Chat Overlay (both mandatory and optional modes) */}
+            {showVoiceChat && activeVoiceChatChar && (
               <div className="voice-chat-overlay">
                 <VoiceChatPanel
-                  voiceChat={currentScene.voiceChat}
+                  voiceChat={activeVoiceChatChar}
                   onComplete={handleVoiceChatComplete}
                   onCancel={handleVoiceChatCancel}
+                  previousMessages={conversationLogs[activeVoiceChatChar.characterName]}
                 />
               </div>
             )}

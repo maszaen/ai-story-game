@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import type { Choice, VoiceChatConfig } from '../types';
+import type { Choice, VoiceChatConfig, ChatMessage } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface ChoiceButtonsProps {
@@ -8,8 +8,14 @@ interface ChoiceButtonsProps {
   isLoading: boolean;
   isGameOver: boolean;
   onBackToMenu: () => void;
+  /** Mandatory voice chat config (no choices shown) */
   voiceChat?: VoiceChatConfig | null;
   onStartVoiceChat?: () => void;
+  /** Optional talkable characters (shown alongside choices) */
+  talkableCharacters?: VoiceChatConfig[];
+  onStartOptionalTalk?: (character: VoiceChatConfig) => void;
+  /** Accumulated conversation messages per character */
+  conversationLogs?: Record<string, ChatMessage[]>;
 }
 
 /**
@@ -65,7 +71,11 @@ const AnimatedHeight: React.FC<{ children: React.ReactNode; className?: string }
   );
 };
 
-export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice, isLoading, isGameOver, onBackToMenu, voiceChat, onStartVoiceChat }) => {
+export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({
+  choices, onChoice, isLoading, isGameOver, onBackToMenu,
+  voiceChat, onStartVoiceChat,
+  talkableCharacters, onStartOptionalTalk, conversationLogs,
+}) => {
   // Track which choice was clicked for exit animation
   const [exitingChoice, setExitingChoice] = useState<number | null>(null);
   const [showContent, setShowContent] = useState(true);
@@ -177,6 +187,12 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice,
     );
   }
 
+  // Check if there are talkable characters for optional talk mode
+  const hasTalkableChars = talkableCharacters && talkableCharacters.length > 0 && !isLoading && exitingChoice === null;
+
+  // Count how many characters have been talked to
+  const chatCount = conversationLogs ? Object.keys(conversationLogs).length : 0;
+
   return (
     <AnimatedHeight>
       <div className="flex-shrink-0 p-4">
@@ -209,6 +225,73 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice,
             </div>
           ) : showContent && choices.length > 0 ? (
             <div className="space-y-3">
+              {/* Optional talk buttons — shown above choices when talkable NPCs exist */}
+              {hasTalkableChars && (
+                <div className="optional-talk-section">
+                  <p
+                    className="text-center mb-2"
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      color: "rgba(201,168,76,0.5)",
+                      fontSize: "0.65rem",
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Ajak Bicara
+                  </p>
+                  <div className="optional-talk-buttons">
+                    {talkableCharacters!.map((char, idx) => {
+                      const hasPreviousChat = conversationLogs && conversationLogs[char.characterName];
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => onStartOptionalTalk?.(char)}
+                          className="optional-talk-btn"
+                          title={char.characterRole}
+                        >
+                          <div className="optional-talk-avatar">
+                            {char.characterName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="optional-talk-info">
+                            <span className="optional-talk-name">{char.characterName}</span>
+                            <span className="optional-talk-role">{char.characterRole}</span>
+                          </div>
+                          <div className="optional-talk-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8h-1a6 6 0 11-12 0H3a7.001 7.001 0 006 6.93V17H7v1h6v-1h-2v-2.07z" clipRule="evenodd" />
+                            </svg>
+                            {hasPreviousChat && (
+                              <span className="optional-talk-badge" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {chatCount > 0 && (
+                    <p
+                      className="text-center mt-2"
+                      style={{
+                        fontFamily: "'Crimson Text', serif",
+                        color: "rgba(201,168,76,0.35)",
+                        fontSize: "0.7rem",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      {chatCount} percakapan tercatat — bisa dilanjutkan atau pilih jalanmu
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Divider between talk buttons and choices */}
+              {hasTalkableChars && (
+                <div className="optional-talk-divider">
+                  <span>atau</span>
+                </div>
+              )}
+
               <p
                 className="text-center mb-2"
                 style={{
@@ -247,6 +330,34 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice,
                   </button>
                 ))}
               </div>
+
+              {/* 4th option: continue based on conversation plans — only when there are conversation logs */}
+              {chatCount > 0 && (
+                <button
+                  onClick={() => handleChoiceClick(
+                    "[Lanjutkan cerita sesuai percakapan dan rencana yang telah dibicarakan dengan karakter-karakter di atas]",
+                    choices.length
+                  )}
+                  disabled={isLoading || exitingChoice !== null}
+                  className={`btn-choice btn-choice-conversation rounded-lg choice-enter flex items-start text-left w-full ${
+                    exitingChoice !== null && exitingChoice !== choices.length
+                      ? "choice-exit-fade"
+                      : ""
+                  } ${exitingChoice === choices.length ? "choice-exit-selected" : ""}`}
+                >
+                  <span
+                    className="mr-2 mt-1 shrink-0"
+                    style={{
+                      color: "#c9a84c",
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    IV.
+                  </span>
+                  <span>Lanjut sesuai percakapan dan rencana yang telah dibicarakan</span>
+                </button>
+              )}
             </div>
           ) : null}
         </div>
