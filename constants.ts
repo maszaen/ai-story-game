@@ -12,97 +12,113 @@ export const GENRES: Genre[] = [
     id: 'fantasy',
     name: 'Fantasi',
     description: 'Kerajaan, sihir, dan makhluk legendaris',
-    initialPrompt: `Mulai petualangan fantasi baru. Pemain adalah seorang petualang pemula yang baru terbangun di hutan kuno misterius tanpa ingatan. Cerita dimulai dengan penemuan sesuatu yang tidak biasa. Quest awal: "Temukan siapa dirimu dan bagaimana kamu bisa sampai di hutan ini."`,
+    initialPrompt: `Genre: FANTASI (kerajaan, sihir, makhluk legendaris, dunia magis).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "terbangun di hutan tanpa ingatan" atau "desa diserang monster". Ciptakan premis yang belum pernah ada — lokasi unik, karakter dengan latar belakang tak terduga, dan konflik pembuka yang mengejutkan. Buat pemain langsung penasaran dari kalimat pertama.`,
   },
   {
     id: 'horror',
     name: 'Horor',
     description: 'Teror, misteri gelap, dan ketakutan',
-    initialPrompt: `Mulai petualangan horor baru. Pemain terbangun di sebuah rumah sakit tua yang ditinggalkan. Lampu berkedip-kedip. Ada suara langkah kaki di koridor kosong. Pintu keluar terkunci dari luar. Quest awal: "Temukan jalan keluar dari rumah sakit terkutuk ini."`,
+    initialPrompt: `Genre: HOROR (teror psikologis, misteri gelap, ketakutan, supernatural).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "rumah sakit tua", "rumah berhantu", atau "terbangun di tempat gelap". Ciptakan premis horor yang segar dan tak terduga — setting yang tidak biasa untuk horor, ancaman yang unik, dan atmosfer mencekam dari awal. Buat pemain merinding tapi penasaran.`,
   },
   {
     id: 'adventure',
     name: 'Petualangan',
     description: 'Eksplorasi, harta karun, dan bahaya',
-    initialPrompt: `Mulai petualangan epik baru. Pemain adalah seorang pemburu harta karun yang menemukan peta kuno menuju harta legendaris di pulau misterius. Kapal baru saja mendarat di pantai yang belum terjamah. Quest awal: "Ikuti petunjuk peta dan temukan harta karun legendaris."`,
+    initialPrompt: `Genre: PETUALANGAN (eksplorasi, harta karun, bahaya, dunia yang luas).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "menemukan peta harta karun" atau "mendarat di pulau misterius". Ciptakan premis petualangan yang segar — alasan unik untuk berpetualang, lokasi awal yang tak terduga, dan hook yang membuat pemain ingin menjelajah lebih jauh.`,
   },
   {
     id: 'scifi',
     name: 'Sci-Fi',
     description: 'Luar angkasa, teknologi, dan masa depan',
-    initialPrompt: `Mulai petualangan fiksi ilmiah baru. Pemain adalah awak pesawat luar angkasa yang terbangun dari cryo-sleep. Sistem alarm berbunyi — kapal sedang terombang-ambing di orbit planet asing. Kru lainnya masih tertidur. Quest awal: "Selamatkan kapal dan kru dari bahaya yang mengancam."`,
+    initialPrompt: `Genre: SCI-FI (luar angkasa, teknologi canggih, masa depan, alien).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "terbangun dari cryo-sleep" atau "alarm kapal berbunyi". Ciptakan premis sci-fi yang segar — bisa di planet, stasiun luar angkasa, koloni, cyberpunk city, atau dimensi lain. Karakter utama bisa siapa saja, bukan hanya astronot. Buat pemain kagum dengan dunia yang kamu ciptakan.`,
   },
   {
     id: 'mystery',
     name: 'Misteri',
     description: 'Teka-teki, investigasi, dan rahasia',
-    initialPrompt: `Mulai petualangan misteri baru. Pemain adalah seorang detektif yang dipanggil ke sebuah mansion megah. Pemiliknya ditemukan tewas di ruang kerjanya yang terkunci dari dalam. Semua tamu masih ada di rumah. Quest awal: "Ungkap kebenaran di balik kematian misterius sang pemilik mansion."`,
+    initialPrompt: `Genre: MISTERI (teka-teki, investigasi, rahasia tersembunyi, plot twist).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "pembunuhan di mansion" atau "mayat di ruangan terkunci". Ciptakan misteri yang segar — bisa tentang hilangnya sesuatu yang aneh, konspirasi kecil yang berkembang besar, atau kejanggalan sehari-hari yang ternyata menyimpan rahasia besar.`,
   },
   {
     id: 'romance',
     name: 'Romansa',
     description: 'Cinta, drama, dan hubungan',
-    initialPrompt: `Mulai petualangan romansa baru. Pemain baru saja pindah ke kota kecil yang indah di pinggir pantai untuk memulai hidup baru. Di hari pertama, nasib mempertemukannya dengan seseorang yang misterius di toko buku tua. Quest awal: "Temukan kebahagiaan di kota baru ini."`,
+    initialPrompt: `Genre: ROMANSA (cinta, drama emosional, hubungan, perasaan mendalam).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "pindah ke kota kecil" atau "bertemu di toko buku/kafe". Ciptakan premis romansa yang segar dan tak terduga — situasi unik yang mempertemukan karakter, setting yang tidak biasa untuk kisah cinta, dan chemistry yang terasa dari awal.`,
   },
   {
     id: 'pirate',
     name: 'Bajak Laut',
     description: 'Lautan, kapal, dan perampok laut',
-    initialPrompt: `Mulai petualangan bajak laut baru. Pemain adalah seorang pelaut muda yang diselamatkan oleh kru bajak laut setelah kapalnya tenggelam. Kapten menawarkan pilihan: bergabung atau ditinggal di pulau terpencil. Quest awal: "Buktikan dirimu layak menjadi bagian dari kru."`,
+    initialPrompt: `Genre: BAJAK LAUT (lautan luas, kapal layar, perampok laut, harta karun, pelabuhan eksotis).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "diselamatkan oleh bajak laut" atau "bergabung dengan kru kapal". Ciptakan premis bajak laut yang segar — bisa dari sudut pandang tak terduga, di lautan yang berbeda, dengan motivasi yang unik untuk berlayar.`,
   },
   {
     id: 'postapocalyptic',
     name: 'Pasca-Apokaliptik',
     description: 'Dunia hancur, bertahan hidup',
-    initialPrompt: `Mulai petualangan pasca-apokaliptik baru. Pemain keluar dari bunker bawah tanah setelah 10 tahun bersembunyi. Dunia di atas sudah berubah total — reruntuhan kota, tanaman raksasa yang aneh, dan makhluk bermutasi. Persediaan makanan habis. Quest awal: "Temukan sumber makanan dan tempat berlindung yang aman."`,
+    initialPrompt: `Genre: PASCA-APOKALIPTIK (dunia setelah kehancuran, bertahan hidup, reruntuhan peradaban).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "keluar dari bunker" atau "terbangun setelah bencana". Ciptakan apokalips yang unik — penyebab kehancuran yang tak biasa, masyarakat baru yang terbentuk, dan situasi awal yang segar. Bisa sudah bertahun-tahun setelah kehancuran dengan peradaban baru yang aneh.`,
   },
   {
     id: 'mythology',
     name: 'Mitologi',
     description: 'Dewa-dewa, legenda, dan kekuatan kuno',
-    initialPrompt: `Mulai petualangan mitologi baru. Pemain adalah seorang manusia biasa yang tiba-tiba ditarik ke dunia para dewa. Ternyata ia adalah keturunan terakhir dari pahlawan legendaris. Para dewa sedang berperang dan pemain harus memilih pihak. Quest awal: "Temui dewan para dewa dan tentukan takdirmu."`,
+    initialPrompt: `Genre: MITOLOGI (dewa-dewa, legenda kuno, kekuatan supernatural, dunia mitos).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "keturunan dewa yang baru sadar" atau "ditarik ke dunia dewa". Ciptakan premis mitologi yang segar — bisa dari mitologi manapun (Yunani, Nordik, Asia, Afrika, dll), dengan twist modern atau perspektif unik. Campur berbagai mitologi jika mau.`,
   },
   {
     id: 'survival',
     name: 'Survival',
     description: 'Bertahan hidup di alam liar',
-    initialPrompt: `Mulai petualangan survival baru. Pemain adalah satu-satunya yang selamat dari kecelakaan pesawat di gunung terpencil. Cuaca semakin dingin, malam hampir tiba, dan tidak ada sinyal. Hanya ada puing-puing pesawat dan hutan lebat di sekitar. Quest awal: "Bertahan hidup sampai tim penyelamat datang."`,
+    initialPrompt: `Genre: SURVIVAL (bertahan hidup, alam liar, tantangan fisik dan mental, isolasi).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "kecelakaan pesawat di gunung" atau "tersesat di hutan". Ciptakan situasi survival yang segar — bisa di bioma apapun (gurun, tundra, lautan, gua bawah tanah, kota yang ditinggalkan), dengan penyebab situasi yang unik.`,
   },
   {
     id: 'steampunk',
     name: 'Steampunk',
     description: 'Mesin uap, tembaga, dan penemuan',
-    initialPrompt: `Mulai petualangan steampunk baru. Pemain adalah seorang penemu muda di kota penuh mesin uap dan balon udara. Penemuannya yang terbaru — mesin waktu portabel — baru saja dicuri oleh organisasi misterius. Quest awal: "Lacak organisasi pencuri dan rebut kembali mesin waktumu."`,
+    initialPrompt: `Genre: STEAMPUNK (mesin uap, teknologi Victoria, penemuan, balon udara, roda gigi tembaga).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "penemu yang penemuannya dicuri". Ciptakan dunia steampunk yang kaya dan segar — kota unik, profesi tak biasa, konflik yang melibatkan teknologi uap dengan cara kreatif.`,
   },
   {
     id: 'samurai',
     name: 'Samurai',
     description: 'Bushido, kehormatan, dan pertempuran',
-    initialPrompt: `Mulai petualangan samurai baru. Pemain adalah ronin — samurai tanpa tuan — yang mengembara di Jepang era Edo. Di sebuah desa kecil, penduduk memohon pertolongan: sekelompok bandit mengancam akan menghancurkan desa. Quest awal: "Lindungi desa dari ancaman bandit."`,
+    initialPrompt: `Genre: SAMURAI (bushido, kehormatan, pedang katana, Jepang feodal, pertempuran).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "ronin yang melindungi desa" atau "balas dendam atas klan yang dibantai". Ciptakan premis samurai yang segar — bisa dari sudut pandang tak biasa, dengan konflik moral yang kompleks, di setting Jepang yang detail dan otentik.`,
   },
   {
     id: 'underwater',
     name: 'Dunia Bawah Laut',
     description: 'Samudra dalam, keajaiban laut',
-    initialPrompt: `Mulai petualangan bawah laut baru. Pemain adalah seorang penyelam yang menemukan gerbang kuno di dasar laut. Gerbang itu membawa ke kota bawah laut yang tersembunyi, dihuni makhluk cerdas yang belum pernah dikenal manusia. Quest awal: "Jelajahi kota bawah laut dan temui penduduknya."`,
+    initialPrompt: `Genre: DUNIA BAWAH LAUT (samudra dalam, keajaiban laut, peradaban bawah air, makhluk laut).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "penyelam menemukan kota bawah laut". Ciptakan premis bawah laut yang segar — bisa dari perspektif penduduk bawah laut, ekspedisi ilmiah yang menemukan sesuatu aneh, atau dunia di mana laut dan darat punya hubungan unik.`,
   },
   {
     id: 'detective',
     name: 'Detektif Noir',
     description: 'Kriminal, penyelidikan, dunia gelap',
-    initialPrompt: `Mulai petualangan detektif noir baru. Pemain adalah detektif swasta di kota besar yang korup. Seorang wanita misterius datang ke kantor malam-malam, meminta bantuan mencari suaminya yang hilang. Tapi ada yang tidak beres — semua petunjuk mengarah ke bos mafia terbesar di kota. Quest awal: "Temukan keberadaan suami yang hilang."`,
+    initialPrompt: `Genre: DETEKTIF NOIR (kriminal, penyelidikan, dunia gelap, moral abu-abu, kota korup).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "wanita misterius datang ke kantor detektif" atau "kasus orang hilang". Ciptakan kasus noir yang segar — bisa dimulai dari situasi yang tampak biasa tapi berkembang menjadi gelap, dengan karakter yang penuh lapisan.`,
   },
   {
     id: 'comedy',
     name: 'Komedi',
     description: 'Lucu, absurd, dan menghibur',
-    initialPrompt: `Mulai petualangan komedi baru. Pemain adalah pegawai kantor biasa yang tidak sengaja membuka portal dimensi lain lewat microwave kantor. Sekarang ada naga mini yang bersarang di ruang meeting, dan bos besar datang inspeksi besok. Quest awal: "Sembunyikan naga dan perbaiki portal sebelum bos datang."`,
+    initialPrompt: `Genre: KOMEDI (lucu, absurd, menghibur, situasi konyol, humor cerdas).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "portal dimensi dari microwave". Ciptakan premis komedi yang segar dan benar-benar lucu — situasi absurd yang escalate dengan cepat, karakter eksentrik, dan humor yang membuat pemain tertawa dari awal.`,
   },
   {
     id: 'zombie',
     name: 'Zombie',
     description: 'Wabah zombie, bertahan hidup',
-    initialPrompt: `Mulai petualangan zombie baru. Pemain terbangun di apartemennya mendengar suara teriakan dan kaca pecah dari luar. TV masih menyala — siaran darurat mengumumkan wabah yang mengubah orang menjadi zombie. Jalanan sudah kacau. Quest awal: "Keluar dari kota dan cari tempat aman."`,
+    initialPrompt: `Genre: ZOMBIE (wabah zombie, bertahan hidup, kelompok survivor, dunia yang runtuh).
+Buat cerita pembuka yang 100% UNIK dan ORIGINAL. DILARANG menggunakan skenario klise seperti "terbangun dan melihat zombie di luar jendela" atau "siaran darurat di TV". Ciptakan premis zombie yang segar — mungkin sudah lama setelah wabah dengan komunitas baru, atau perspektif unik tentang awal wabah, atau twist pada konsep zombie itu sendiri.`,
   },
 ];
 

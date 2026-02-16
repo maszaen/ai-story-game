@@ -404,9 +404,10 @@ const App: React.FC = () => {
     setShowStartLoader(true);
 
     try {
+      const randomSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
       const prompt = selectedGenre
-        ? `${selectedGenre.initialPrompt}\n\nPENTING: Semua teks cerita, pilihan, quest, dan item inventory HARUS dalam Bahasa Indonesia.`
-        : 'Mulai petualangan fantasi baru. Pemain terbangun di hutan kuno misterius. Quest awal: "Temukan siapa dirimu." SEMUA teks HARUS dalam Bahasa Indonesia.';
+        ? `${selectedGenre.initialPrompt}\n\n[SEED: ${randomSeed}]\n\nATURAN REALISME: Cerita harus kreatif dan unik, tapi LATAR/SETTING harus MASUK AKAL dan KOHEREN. Lokasi harus realistis sesuai genre — benda-benda di dalamnya harus punya alasan logis untuk ada di sana. Dunia boleh fantastis/magis jika genre meminta, tapi harus punya logika internal yang konsisten seperti dunia nyata.\n\nPENTING: Semua teks cerita, pilihan, quest, dan item inventory HARUS dalam Bahasa Indonesia.`
+        : `Mulai petualangan fantasi baru yang unik dan original. Setting harus realistis dan koheren. Seed: ${randomSeed}. SEMUA teks HARUS dalam Bahasa Indonesia.`;
       const result = await getNextScene([], prompt, settings);
       const newTurnCount = 1;
       setTurnCount(newTurnCount);
