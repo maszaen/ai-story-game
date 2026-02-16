@@ -99,8 +99,39 @@ const storyResponseSchema = {
       type: Type.STRING,
       description: "A dramatic, poetic game-over message in Indonesian. Only used when isGameOver is true. Otherwise set to empty string.",
     },
+    requiresVoiceChat: {
+      type: Type.BOOLEAN,
+      description: "Set to true when this scene naturally requires the player to have a live voice conversation/discussion with an NPC character before the story can continue. Use this for scenes where: planning together, negotiation, interrogation, emotional heart-to-heart dialogue, asking for directions/information, or collaborative decision-making would be MORE immersive and engaging than simple text choices. When true, the 'choices' array MUST be EMPTY [] and 'voiceChatConfig' must be fully populated. When false, provide normal choices and leave voiceChatConfig with empty strings. Use this approximately once every 3-5 scenes — not too often, but at key narrative moments.",
+    },
+    voiceChatConfig: {
+      type: Type.OBJECT,
+      description: "Configuration for voice chat with an NPC. Only meaningful when requiresVoiceChat is true. When requiresVoiceChat is false, fill all fields with empty strings.",
+      properties: {
+        characterName: {
+          type: Type.STRING,
+          description: "The NPC character's name. Example: 'Eliot', 'Nyai Roro', 'Kapten Blackwood'",
+        },
+        characterRole: {
+          type: Type.STRING,
+          description: "Brief description of who this character is, in Indonesian. Example: 'Teman seperjalanan, ahli dalam menggunakan kunci'",
+        },
+        voiceName: {
+          type: Type.STRING,
+          description: "Voice to use for this character. Choose based on character gender and personality: 'Kore' (calm female), 'Zephyr' (energetic female), 'Fenrir' (deep male), 'Charon' (mysterious male), 'Puck' (friendly male). Must be one of: Zephyr, Puck, Charon, Kore, Fenrir.",
+        },
+        initialDialogue: {
+          type: Type.STRING,
+          description: "The character's opening dialogue line that starts the conversation, in Indonesian. This should set up the topic of discussion and invite the player to respond. Example: 'Kita perlu rencana. Kunci itu ada di dasar sumur, tapi airnya terlalu dalam. Menurutmu bagaimana?'",
+        },
+        systemInstruction: {
+          type: Type.STRING,
+          description: "Complete system instruction for the voice AI to roleplay this character during the live conversation. Write in Indonesian. Must include: (1) Character personality & speaking style, (2) What the character knows about the current situation, (3) Character's relationship with the player, (4) The goal/topic of this conversation, (5) What information or decisions need to be reached, (6) Instruction to naturally conclude when a plan/decision is made — say something like 'Baik, kalau begitu ayo kita lakukan!' when resolved. (7) IMPORTANT: Start the conversation naturally by speaking the opening line. Keep responses to 2-4 sentences to maintain conversational flow.",
+        },
+      },
+      required: ['characterName', 'characterRole', 'voiceName', 'initialDialogue', 'systemInstruction'],
+    },
   },
-  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage'],
+  required: ['sceneVisualContext', 'characterVisualIdentity', 'locationVisualIdentity', 'storySegments', 'choices', 'inventoryUpdates', 'quests', 'isGameOver', 'gameOverMessage', 'requiresVoiceChat', 'voiceChatConfig'],
 };
 
 export const getNextScene = async (
@@ -182,6 +213,23 @@ ATURAN GAME OVER:
 - Kematian TIDAK selalu berarti game over — jika ada kemungkinan kelanjutan cerita (kebangkitan, petualangan alam baka, pertolongan, intervensi ilahi, dsb), JANGAN set game over. Biarkan cerita berlanjut.
 - Jika isGameOver=true, choices HARUS kosong [].
 
+FITUR DISKUSI SUARA (VOICE CHAT) DENGAN KARAKTER NPC:
+- Dalam beberapa scene, alih-alih memberikan 3 pilihan teks, kamu bisa membuat scene yang memerlukan DISKUSI LANGSUNG pemain dengan karakter NPC melalui suara.
+- Set requiresVoiceChat=true jika scene ini secara alami membutuhkan percakapan langsung: merencanakan strategi bersama, negosiasi, interogasi, curhat/dialog emosional, bertanya arah/informasi penting, atau pengambilan keputusan kolaboratif.
+- Jika requiresVoiceChat=true: choices HARUS kosong [], dan voiceChatConfig HARUS diisi LENGKAP.
+- Jika requiresVoiceChat=false: berikan choices normal (3 pilihan), dan voiceChatConfig diisi string kosong untuk semua field.
+- Gunakan fitur ini secara SEIMBANG — kira-kira 1 dari setiap 3-5 scene. Jangan terlalu sering, tapi jangan juga terlalu jarang. Gunakan pada momen narasi yang tepat untuk meningkatkan imersi.
+- JANGAN gunakan voice chat di scene pertama (scene pembuka/intro).
+- voiceName: Pilih suara sesuai gender dan kepribadian karakter:
+  * Perempuan: Kore (tenang/bijak), Zephyr (energik/ceria)
+  * Laki-laki: Fenrir (dalam/berwibawa), Charon (misterius/gelap), Puck (ramah/cerdas)
+- Untuk systemInstruction di voiceChatConfig: tulis panduan LENGKAP agar AI suara bisa memerankan karakter ini dengan sempurna. Sertakan kepribadian, pengetahuan karakter, konteks situasi, hubungan dengan pemain, tujuan percakapan, dan kapan harus mengakhiri diskusi.
+
+MENANGANI INPUT DISKUSI SUARA:
+- Jika input pemain berupa transkrip diskusi suara (ditandai dengan [Pemain berdiskusi langsung dengan ...]), lanjutkan cerita berdasarkan HASIL diskusi tersebut.
+- Gunakan keputusan/rencana yang dibuat dalam diskusi untuk menentukan arah cerita selanjutnya.
+- Referensikan percakapan yang terjadi di narasi (misal: 'Setelah berdiskusi panjang dengan Eliot, mereka memutuskan untuk...').
+
 Pastikan ceritanya koheren, pilihan bermakna, dan dunia game diperbarui secara logis.
 
 Balas hanya dengan objek JSON yang diminta.`,
@@ -248,11 +296,23 @@ Balas hanya dengan objek JSON yang diminta.`,
     image: images[i] || '',
   }));
 
+  // Extract voice chat config if present
+  const voiceChat = gameStateUpdate.requiresVoiceChat && gameStateUpdate.voiceChatConfig?.characterName
+    ? {
+        characterName: gameStateUpdate.voiceChatConfig.characterName,
+        characterRole: gameStateUpdate.voiceChatConfig.characterRole,
+        voiceName: gameStateUpdate.voiceChatConfig.voiceName || 'Kore',
+        initialDialogue: gameStateUpdate.voiceChatConfig.initialDialogue,
+        systemInstruction: gameStateUpdate.voiceChatConfig.systemInstruction,
+      }
+    : null;
+
   const newScene: Scene = {
     segments,
     choices,
     isGameOver,
     gameOverMessage: gameOverMessage || '',
+    voiceChat,
   };
 
   const newHistory = [...currentHistory, { role: 'model', parts: [{ text: JSON.stringify(gameStateUpdate) }] }];

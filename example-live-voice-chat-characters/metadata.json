@@ -1,0 +1,7 @@
+{
+  "name": "Live Voice Chat Characters",
+  "description": "Engage in real-time voice conversations with a variety of AI characters, each with a unique personality and voice. Personalize your experience by sharing your interests in the settings.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

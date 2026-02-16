@@ -7,6 +7,22 @@ export interface QuestItem {
   completed: boolean;
 }
 
+/** Configuration for a voice chat scene with an NPC character */
+export interface VoiceChatConfig {
+  characterName: string;
+  characterRole: string;
+  voiceName: string; // Zephyr | Puck | Charon | Kore | Fenrir
+  initialDialogue: string;
+  systemInstruction: string;
+}
+
+/** A single message in a voice chat conversation */
+export interface ChatMessage {
+  id: number;
+  sender: 'user' | 'character';
+  text: string;
+}
+
 export interface GameStateUpdate {
   /** Shared visual context for ALL images in this scene — location, time, weather, lighting */
   sceneVisualContext: string;
@@ -29,6 +45,16 @@ export interface GameStateUpdate {
   isGameOver: boolean;
   /** Short game-over message when isGameOver is true */
   gameOverMessage: string;
+  /** Whether this scene requires a voice chat with an NPC instead of choices */
+  requiresVoiceChat: boolean;
+  /** Voice chat configuration — only populated when requiresVoiceChat is true */
+  voiceChatConfig: {
+    characterName: string;
+    characterRole: string;
+    voiceName: string;
+    initialDialogue: string;
+    systemInstruction: string;
+  };
 }
 
 export interface Scene {
@@ -40,4 +66,6 @@ export interface Scene {
   choices: Choice[];
   isGameOver: boolean;
   gameOverMessage: string;
+  /** Voice chat configuration when this scene requires NPC conversation */
+  voiceChat?: VoiceChatConfig | null;
 }

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import type { Choice } from '../types';
+import type { Choice, VoiceChatConfig } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 
 interface ChoiceButtonsProps {
@@ -8,6 +8,8 @@ interface ChoiceButtonsProps {
   isLoading: boolean;
   isGameOver: boolean;
   onBackToMenu: () => void;
+  voiceChat?: VoiceChatConfig | null;
+  onStartVoiceChat?: () => void;
 }
 
 /**
@@ -63,7 +65,7 @@ const AnimatedHeight: React.FC<{ children: React.ReactNode; className?: string }
   );
 };
 
-export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice, isLoading, isGameOver, onBackToMenu }) => {
+export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice, isLoading, isGameOver, onBackToMenu, voiceChat, onStartVoiceChat }) => {
   // Track which choice was clicked for exit animation
   const [exitingChoice, setExitingChoice] = useState<number | null>(null);
   const [showContent, setShowContent] = useState(true);
@@ -106,6 +108,69 @@ export const ChoiceButtons: React.FC<ChoiceButtonsProps> = ({ choices, onChoice,
             >
               Kembali ke Menu
             </button>
+          </div>
+        </div>
+      </AnimatedHeight>
+    );
+  }
+
+  // Voice Chat mode — show mic button instead of choices
+  if (voiceChat && !isLoading && exitingChoice === null) {
+    return (
+      <AnimatedHeight>
+        <div className="flex-shrink-0 p-4">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="voice-chat-trigger parchment-bg-light rounded-lg p-5">
+              <p
+                className="text-center mb-1"
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  color: "rgba(201,168,76,0.5)",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Diskusi Langsung
+              </p>
+              <p
+                className="text-center mb-4"
+                style={{
+                  fontFamily: "'Crimson Text', serif",
+                  color: "rgba(180,160,120,0.5)",
+                  fontSize: "0.75rem",
+                  fontStyle: "italic",
+                }}
+              >
+                Scene ini memerlukan percakapan dengan karakter
+              </p>
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={onStartVoiceChat}
+                  className="voice-trigger-btn group"
+                >
+                  <div className="voice-trigger-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8h-1a6 6 0 11-12 0H3a7.001 7.001 0 006 6.93V17H7v1h6v-1h-2v-2.07z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="voice-trigger-label">
+                    Diskusi dengan {voiceChat.characterName}
+                  </span>
+                </button>
+                <span
+                  className="mt-3"
+                  style={{
+                    fontFamily: "'Crimson Text', serif",
+                    color: "rgba(201,168,76,0.3)",
+                    fontSize: "0.7rem",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Gunakan mikrofon untuk berbicara langsung
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </AnimatedHeight>

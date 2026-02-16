@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import type { Scene } from '../types';
+import type { Scene, VoiceChatConfig } from '../types';
 import { IconSkull } from './Icons';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SpeakableText } from './SpeakableText';
@@ -83,6 +83,29 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
               )}
             </div>
           ))}
+
+          {/* NPC Initial Dialogue for Voice Chat scenes */}
+          {scene.voiceChat && !scene.isGameOver && (
+            <div className="mx-6 mb-4 stagger-child">
+              <div className="ornate-divider mx-0">
+                <span style={{ color: 'rgba(201,168,76,0.35)', fontSize: '10px' }}>◆</span>
+              </div>
+              <div className="npc-dialogue-block">
+                <div className="npc-dialogue-header">
+                  <div className="npc-dialogue-avatar">
+                    {scene.voiceChat.characterName.charAt(0)}
+                  </div>
+                  <div className="npc-dialogue-meta">
+                    <span className="npc-dialogue-name">{scene.voiceChat.characterName}</span>
+                    <span className="npc-dialogue-role">{scene.voiceChat.characterRole}</span>
+                  </div>
+                </div>
+                <p className="npc-dialogue-text">
+                  "{scene.voiceChat.initialDialogue}"
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Game Over banner */}
           {scene.isGameOver && (

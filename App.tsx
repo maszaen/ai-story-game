@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { StoryPanel } from './components/StoryPanel';
 import { ChoiceButtons } from './components/ChoiceButtons';
+import { VoiceChatPanel } from './components/VoiceChatPanel';
 import { HomePage } from './components/HomePage';
 import { SettingsPage } from './components/SettingsPage';
 import { GenrePicker } from './components/GenrePicker';
@@ -187,6 +188,7 @@ const App: React.FC = () => {
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const storyScrollRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showVoiceChat, setShowVoiceChat] = useState(false);
 
   // Scroll story to top when scene changes
   useEffect(() => {
@@ -401,6 +403,20 @@ const App: React.FC = () => {
     }
   }, [storyHistory, inventory, settings, currentSaveId, saveName, turnCount, sceneHistory, saveProgress, characterVisualIdentity, locationVisualIdentity]);
 
+  const handleStartVoiceChat = useCallback(() => {
+    setShowVoiceChat(true);
+  }, []);
+
+  const handleVoiceChatComplete = useCallback((conversationSummary: string) => {
+    setShowVoiceChat(false);
+    // Feed the conversation transcript as the next "choice" to continue the story
+    handleChoice(conversationSummary);
+  }, [handleChoice]);
+
+  const handleVoiceChatCancel = useCallback(() => {
+    setShowVoiceChat(false);
+  }, []);
+
   // HOME VIEW
   if (view === 'home') {
     return (
@@ -572,7 +588,7 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* Fixed bottom: choices (only on latest scene, not during initial generation) */}
+            {/* Fixed bottom: choices or voice chat trigger (only on latest scene, not during initial generation) */}
             {isViewingLatest && !(isLoading && sceneHistory.length === 0) && (
               <div className="game-bottom-bar-wrapper">
                 <div className="game-bottom-bar">
@@ -582,8 +598,21 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                     isGameOver={isGameOver}
                     onBackToMenu={handleBackToMenu}
+                    voiceChat={currentScene?.voiceChat}
+                    onStartVoiceChat={handleStartVoiceChat}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Voice Chat Overlay */}
+            {showVoiceChat && currentScene?.voiceChat && (
+              <div className="voice-chat-overlay">
+                <VoiceChatPanel
+                  voiceChat={currentScene.voiceChat}
+                  onComplete={handleVoiceChatComplete}
+                  onCancel={handleVoiceChatCancel}
+                />
               </div>
             )}
           </>
