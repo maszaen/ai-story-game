@@ -94,7 +94,7 @@ export const GenrePicker: React.FC<GenrePickerProps> = ({ onSelectGenre, onBack 
             <button
               key={genre.id}
               onClick={() => onSelectGenre(genre)}
-              className="group relative p-4 rounded-lg border border-amber-900/40 hover:border-amber-600/70 transition-all duration-300 text-left overflow-hidden"
+              className="group relative flex items-start p-4 rounded-lg border border-amber-900/40 hover:border-amber-600/70 transition-all duration-300 text-left overflow-hidden"
               style={{
                 background:
                   "linear-gradient(180deg, rgba(25,18,8,0.8) 0%, rgba(15,10,5,0.95) 100%)",
@@ -110,20 +110,20 @@ export const GenrePicker: React.FC<GenrePickerProps> = ({ onSelectGenre, onBack 
               />
 
               <div className="relative z-10">
-                <div className="mb-2" style={{ color: "rgba(201,168,76,0.6)" }}>
+                <div className="mb-2" style={{ color: "#F59E0B" }}>
                   {(() => {
                     const Icon = GENRE_ICONS[genre.id];
                     return Icon ? <Icon size={28} /> : <IconSwords size={28} />;
                   })()}
                 </div>
                 <h3
-                  className="text-amber-500 font-semibold group-hover:text-amber-400 transition-colors mb-1"
+                  className="text-amber-400 font-semibold group-hover:text-amber-500 transition-colors mb-1"
                   style={{ fontFamily: "'Cinzel', serif", fontSize: "0.85rem" }}
                 >
                   {genre.name}
                 </h3>
                 <p
-                  className="text-amber-800/50 text-xs leading-relaxed group-hover:text-amber-700/60 transition-colors"
+                  className="text-amber-800/80 text-xs leading-relaxed group-hover:text-amber-700/80 transition-colors"
                   style={{ fontFamily: "'Crimson Text', serif" }}
                 >
                   {genre.description}

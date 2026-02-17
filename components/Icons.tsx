@@ -156,16 +156,53 @@ export const IconSend = (props: IconProps) => svg(
 // ─── Genre Icons ────────────────────────────────────────
 
 /** Castle / Fantasy */
-export const IconCastle = (props: IconProps) => svg(
-  'M3 21V11l2-2V6l2-2v3l2-2v3l2-2v3l2-2v3l2-2V6l2-2v3l2 2v10 M3 21h18 M8 21v-4h3v4 M13 21v-4h3v4',
-  props
-);
+export const IconCastle = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-wand-sparkles-icon lucide-wand-sparkles"
+    >
+      <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" />
+      <path d="m14 7 3 3" />
+      <path d="M5 6v4" />
+      <path d="M19 14v4" />
+      <path d="M10 2v2" />
+      <path d="M7 8H3" />
+      <path d="M21 16h-4" />
+      <path d="M11 3H9" />
+    </svg>,
+    props
+  );
 
 /** Ghost / Horror */
-export const IconGhost = (props: IconProps) => svg(
-  'M12 2a8 8 0 0 0-8 8v12l3-3 2.5 3 2.5-3 2.5 3 2.5-3 3 3V10a8 8 0 0 0-8-8z M9 10h.01 M15 10h.01',
-  props
-);
+export const IconGhost = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-ghost-icon lucide-ghost"
+    >
+      <path d="M9 10h.01" />
+      <path d="M15 10h.01" />
+      <path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z" />
+    </svg>,
+    props
+  );
 
 /** Compass / Adventure */
 export const IconCompass = (props: IconProps) => svgFill(
@@ -177,10 +214,28 @@ export const IconCompass = (props: IconProps) => svgFill(
 );
 
 /** Star / Sci-Fi */
-export const IconStar = (props: IconProps) => svg(
-  'M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.8 5.6 21.2 8 14 2 9.2h7.6z',
-  props
-);
+export const IconStar = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-orbit-icon lucide-orbit"
+    >
+      <path d="M20.341 6.484A10 10 0 0 1 10.266 21.85" />
+      <path d="M3.659 17.516A10 10 0 0 1 13.74 2.152" />
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="19" cy="5" r="2" />
+      <circle cx="5" cy="19" r="2" />
+    </svg>,
+    props
+  );
 
 /** Eye / Mystery */
 export const IconEye = (props: IconProps) => svgFill(
@@ -204,17 +259,29 @@ export const IconAnchor = (props: IconProps) => svg(
 );
 
 /** Radiation / Post-apocalyptic */
-export const IconRadiation = (props: IconProps) => svgFill(
-  <>
-    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-    <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>
-    <path d="M12 2a10 10 0 0 1 8.66 5L12 12z" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-    <path d="M12 2a10 10 0 0 0-8.66 5L12 12z" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-    <path d="M12 22a10 10 0 0 1-8.66-5L12 12z" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-    <path d="M12 22a10 10 0 0 0 8.66-5L12 12z" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-  </>,
-  props
-);
+export const IconRadiation = (props: IconProps) =>
+  svgFill(
+    <>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-radiation-icon lucide-radiation"
+      >
+        <path d="M12 12h.01" />
+        <path d="M14 15.4641a4 4 0 0 1-4 0L7.52786 19.74597 A 1 1 0 0 0 7.99303 21.16211 10 10 0 0 0 16.00697 21.16211 1 1 0 0 0 16.47214 19.74597z" />
+        <path d="M16 12a4 4 0 0 0-2-3.464l2.472-4.282a1 1 0 0 1 1.46-.305 10 10 0 0 1 4.006 6.94A1 1 0 0 1 21 12z" />
+        <path d="M8 12a4 4 0 0 1 2-3.464L7.528 4.254a1 1 0 0 0-1.46-.305 10 10 0 0 0-4.006 6.94A1 1 0 0 0 3 12z" />
+      </svg>
+    </>,
+    props
+  );
 
 /** Lightning bolt / Mythology */
 export const IconLightning = (props: IconProps) => svg(
@@ -223,10 +290,26 @@ export const IconLightning = (props: IconProps) => svg(
 );
 
 /** Campfire / Survival */
-export const IconCampfire = (props: IconProps) => svg(
-  'M12 4c0 4-6 6-6 10a6 6 0 0 0 12 0c0-4-6-6-6-10z M12 18a2 2 0 0 1-2-2c0-2 2-3 2-3s2 1 2 3a2 2 0 0 1-2 2z M2 22l5-3 M22 22l-5-3 M7 19l5 3 5-3',
-  props
-);
+export const IconCampfire = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-flame-kindling-icon lucide-flame-kindling"
+    >
+      <path d="M12 2c1 3 2.5 3.5 3.5 4.5A5 5 0 0 1 17 10a5 5 0 1 1-10 0c0-.3 0-.6.1-.9a2 2 0 1 0 3.3-2C8 4.5 11 2 12 2Z" />
+      <path d="m5 22 14-4" />
+      <path d="m5 18 14 4" />
+    </svg>,
+    props
+  );
 
 /** Cog / Steampunk */
 export const IconCog = (props: IconProps) => svgFill(
@@ -238,10 +321,31 @@ export const IconCog = (props: IconProps) => svgFill(
 );
 
 /** Katana / Samurai */
-export const IconKatana = (props: IconProps) => svg(
-  'M5 19L19 5 M8.5 15.5l-4 4 M15.5 8.5l-7 7 M19 5c.5-.5 1-2 0-3s-2.5-.5-3 0',
-  props
-);
+export const IconKatana = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-swords-icon lucide-swords"
+    >
+      <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+      <line x1="13" x2="19" y1="19" y2="13" />
+      <line x1="16" x2="20" y1="16" y2="20" />
+      <line x1="19" x2="21" y1="21" y2="19" />
+      <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+      <line x1="5" x2="9" y1="14" y2="18" />
+      <line x1="7" x2="4" y1="17" y2="20" />
+      <line x1="3" x2="5" y1="19" y2="21" />
+    </svg>,
+    props
+  );
 
 /** Waves / Underwater */
 export const IconWaves = (props: IconProps) => svg(
@@ -260,10 +364,27 @@ export const IconMonocle = (props: IconProps) => svgFill(
 );
 
 /** Comedy masks */
-export const IconMasks = (props: IconProps) => svg(
-  'M2 10a7 7 0 0 0 14 0V8a7 7 0 0 0-14 0v2z M6 11a1 1 0 0 0 2 0 M10 11a1 1 0 0 0 2 0 M7 14c1 1 3 1 4 0 M10 8a7 7 0 0 1 12 4v2a7 7 0 0 1-6.5 4 M16 11a1 1 0 0 0 2 0',
-  props
-);
+export const IconMasks = (props: IconProps) =>
+  svgFill(
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-laugh-icon lucide-laugh"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z" />
+      <line x1="9" x2="9.01" y1="9" y2="9" />
+      <line x1="15" x2="15.01" y1="9" y2="9" />
+    </svg>,
+    props
+  );
 
 /** Walking dead / Zombie */
 export const IconZombie = (props: IconProps) => svgFill(
