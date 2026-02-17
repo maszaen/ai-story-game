@@ -17,6 +17,10 @@ export interface GameSettings {
   gender: Gender;
   /** When true, API key is stored in localStorage (survives refresh). Otherwise sessionStorage. */
   persistApiKey: boolean;
+  /** Volume controls (0-1) */
+  masterVolume: number;
+  musicVolume: number;
+  voiceVolume: number;
 }
 
 const SETTINGS_KEY = 'adventure-engine-settings';
@@ -46,6 +50,9 @@ const DEFAULT_SETTINGS: GameSettings = {
   autoSave: true,
   gender: 'male',
   persistApiKey: false,
+  masterVolume: 1,
+  musicVolume: 0.1,
+  voiceVolume: 1,
 };
 
 export function getSettings(): GameSettings {

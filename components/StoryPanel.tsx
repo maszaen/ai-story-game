@@ -6,9 +6,11 @@ import { SpeakableText } from './SpeakableText';
 interface StoryPanelProps {
   scene: Scene | null;
   isLoading: boolean;
+  /** effective voice volume (master * voice) passed from App */
+  voiceVolume?: number;
 }
 
-export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
+export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading, voiceVolume = 1 }) => {
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [lightboxClosing, setLightboxClosing] = useState(false);
 
@@ -91,7 +93,7 @@ export const StoryPanel: React.FC<StoryPanelProps> = ({ scene, isLoading }) => {
 
               {/* Text with TTS */}
               <div className="px-6 md:px-8 py-4">
-                <SpeakableText text={segment.text} />
+                <SpeakableText text={segment.text} voiceVolume={voiceVolume} />
               </div>
 
               {/* Segment divider (not after last) */}

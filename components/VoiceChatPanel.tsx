@@ -12,6 +12,8 @@ interface VoiceChatPanelProps {
   previousMessages?: ChatMessage[];
   /** Story context from previous scenes for memory continuity */
   storyContext?: string;
+  /** effective voice volume (master * voice) */
+  voiceVolume?: number;
 }
 
 /** Local interface for the live session object (not exported from SDK) */
@@ -65,7 +67,7 @@ const SendIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   </svg>
 );
 
-export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel, previousMessages, storyContext }) => {
+export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onComplete, onCancel, previousMessages, storyContext, voiceVolume }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Membuka gerbang komunikasi...');
@@ -117,6 +119,13 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript, streamingMessage]);
+
+  // Update output gain when voiceVolume prop changes
+  useEffect(() => {
+    if (outputGainNodeRef.current && typeof voiceVolume === 'number') {
+      outputGainNodeRef.current.gain.value = voiceVolume;
+    }
+  }, [voiceVolume]);
 
   const stopSession = useCallback(async () => {
     setStatusMessage('Diskusi berakhir.');
@@ -171,6 +180,8 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({ voiceChat, onCom
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       outputGainNodeRef.current = outputAudioContextRef.current.createGain();
+      // Initialize gain to the provided voiceVolume (or 1)
+      outputGainNodeRef.current.gain.value = voiceVolume ?? 1;
       outputGainNodeRef.current.connect(outputAudioContextRef.current.destination);
 
       let nextStartTime = 0;

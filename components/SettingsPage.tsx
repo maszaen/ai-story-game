@@ -10,11 +10,15 @@ interface SettingsPageProps {
   settings: GameSettings;
   onChange: (settings: GameSettings) => void;
   onBack: () => void;
+  masterVolume: number;
+  onMasterVolumeChange: (v: number) => void;
   musicVolume: number;
   onVolumeChange: (v: number) => void;
+  voiceVolume: number;
+  onVoiceVolumeChange: (v: number) => void;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, onBack, musicVolume, onVolumeChange }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, onBack, masterVolume, onMasterVolumeChange, musicVolume, onVolumeChange, voiceVolume, onVoiceVolumeChange }) => {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [keySaved, setKeySaved] = useState(false);
   const envKeyActive = isEnvKey();
@@ -194,7 +198,37 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
             </div>
           </SettingCard>
         )}
-        {/* Volume */}
+        {/* Master volume */}
+        <SettingCard title="Volume Utama" desc="Kontrol volume keseluruhan aplikasi.">
+          <div className="flex items-center gap-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(201,168,76,0.5)', flexShrink: 0 }}>
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M19 8v8M23 6v12" strokeWidth="1.6" />
+            </svg>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(masterVolume * 100)}
+              onChange={e => onMasterVolumeChange(Number(e.target.value) / 100)}
+              className="volume-slider flex-1"
+              style={{
+                background: `linear-gradient(to right, #c9a84c 0%, #c9a84c ${Math.round(masterVolume * 100)}%, #2d1b0a ${Math.round(masterVolume * 100)}%, #2d1b0a 100%)`
+              }}
+            />
+            <span style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: '0.75rem',
+              color: '#c9a84c',
+              minWidth: '36px',
+              textAlign: 'right',
+            }}>
+              {Math.round(masterVolume * 100)}%
+            </span>
+          </div>
+        </SettingCard>
+
+        {/* Music volume (backsound) */}
         <SettingCard title="Volume Musik" desc="Atur volume musik latar petualanganmu.">
           <div className="flex items-center gap-4">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(201,168,76,0.5)', flexShrink: 0 }}>
@@ -223,6 +257,37 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onChange, 
               textAlign: 'right',
             }}>
               {Math.round(musicVolume * 100)}%
+            </span>
+          </div>
+        </SettingCard>
+
+        {/* Voice / TTS volume */}
+        <SettingCard title="Volume Suara & TTS" desc="Atur volume suara karakter dan TTS.">
+          <div className="flex items-center gap-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(201,168,76,0.5)', flexShrink: 0 }}>
+              <path d="M12 1v11" />
+              <path d="M7 5v6a5 5 0 0010 0V5" />
+              <path d="M5 10a7 7 0 0014 0" />
+            </svg>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(voiceVolume * 100)}
+              onChange={e => onVoiceVolumeChange(Number(e.target.value) / 100)}
+              className="volume-slider flex-1"
+              style={{
+                background: `linear-gradient(to right, #c9a84c 0%, #c9a84c ${Math.round(voiceVolume * 100)}%, #2d1b0a ${Math.round(voiceVolume * 100)}%, #2d1b0a 100%)`
+              }}
+            />
+            <span style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: '0.75rem',
+              color: '#c9a84c',
+              minWidth: '36px',
+              textAlign: 'right',
+            }}>
+              {Math.round(voiceVolume * 100)}%
             </span>
           </div>
         </SettingCard>

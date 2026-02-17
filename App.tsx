@@ -207,8 +207,12 @@ const App: React.FC = () => {
   const [conversationLogs, setConversationLogs] = useState<Record<string, ChatMessage[]>>({});
   /** Known characters with generated portraits for visual consistency */
   const [knownCharacters, setKnownCharacters] = useState<CharacterPortrait[]>([]);
-  /** Music volume (0-1), default 50% */
-  const [musicVolume, setMusicVolume] = useState(0.2);
+  /** Master volume (global 0–1) */
+  const [masterVolume, setMasterVolume] = useState(settings.masterVolume ?? 1);
+  /** Music (backsound) volume (0-1) */
+  const [musicVolume, setMusicVolume] = useState(settings.musicVolume ?? 0.1);
+  /** Voice/TTS volume (0-1) */
+  const [voiceVolume, setVoiceVolume] = useState(settings.voiceVolume ?? 1);
 
   // Asset Loading State
   const [assetsLoaded, setAssetsLoaded] = useState(false);
@@ -265,10 +269,20 @@ const App: React.FC = () => {
     }
   }, [isLoading]);
 
-  // Sync volume
+  // Sync backsound volume (master * backsound)
   useEffect(() => {
-    audioManager.setVolume(musicVolume);
-  }, [musicVolume]);
+    const effectiveBacksound = masterVolume * musicVolume;
+    audioManager.setVolume(effectiveBacksound);
+  }, [masterVolume, musicVolume]);
+
+  // Persist volume settings into GameSettings so they survive refresh
+  useEffect(() => {
+    setSettings(prev => {
+      const next = { ...prev, masterVolume, musicVolume, voiceVolume } as any;
+      saveSettings(next);
+      return next;
+    });
+  }, [masterVolume, musicVolume, voiceVolume]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -684,8 +698,12 @@ const App: React.FC = () => {
           settings={settings} 
           onChange={handleSettingsChange} 
           onBack={popView}
+          masterVolume={masterVolume}
+          onMasterVolumeChange={setMasterVolume}
           musicVolume={musicVolume}
           onVolumeChange={setMusicVolume}
+          voiceVolume={voiceVolume}
+          onVoiceVolumeChange={setVoiceVolume}
         />
       </PageTransition>
     );
@@ -872,6 +890,7 @@ const App: React.FC = () => {
               <StoryPanel
                 scene={currentScene}
                 isLoading={isLoading && sceneHistory.length === 0}
+                voiceVolume={masterVolume * voiceVolume}
               />
             </div>
 
@@ -905,6 +924,7 @@ const App: React.FC = () => {
                   onCancel={handleVoiceChatCancel}
                   previousMessages={conversationLogs[activeVoiceChatChar.characterName]}
                   storyContext={buildStoryContext()}
+                  voiceVolume={masterVolume * voiceVolume}
                 />
               </div>
             )}

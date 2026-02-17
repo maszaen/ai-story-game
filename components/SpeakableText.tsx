@@ -3,18 +3,21 @@ import { generateSpeech, decodeAudioData } from '../services/speechService';
 
 interface SpeakableTextProps {
   text: string;
+  /** Relative volume for this TTS playback (0-1). App passes master*voice */
+  voiceVolume?: number;
 }
 
 /**
  * A story text paragraph with an inline Play/Stop button that triggers TTS
  * with real-time word highlighting. Medieval-themed UI.
  */
-export const SpeakableText: React.FC<SpeakableTextProps> = ({ text }) => {
+export const SpeakableText: React.FC<SpeakableTextProps> = ({ text, voiceVolume = 1 }) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle');
   const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const animationFrameIdRef = useRef<number>(0);
   const wordTimestampsRef = useRef<number[]>([]);
   const playbackStartTimeRef = useRef<number>(0);
@@ -24,6 +27,10 @@ export const SpeakableText: React.FC<SpeakableTextProps> = ({ text }) => {
       try { audioSourceRef.current.stop(); } catch (_) { /* already stopped */ }
       audioSourceRef.current.disconnect();
       audioSourceRef.current = null;
+    }
+    if (gainNodeRef.current) {
+      try { gainNodeRef.current.disconnect(); } catch (_) { /* ignore */ }
+      gainNodeRef.current = null;
     }
     cancelAnimationFrame(animationFrameIdRef.current);
     setStatus('idle');
@@ -66,7 +73,14 @@ export const SpeakableText: React.FC<SpeakableTextProps> = ({ text }) => {
 
       audioSourceRef.current = audioContextRef.current.createBufferSource();
       audioSourceRef.current.buffer = audioBuffer;
-      audioSourceRef.current.connect(audioContextRef.current.destination);
+
+      // Ensure we have a gain node to control TTS volume
+      if (!gainNodeRef.current) {
+        gainNodeRef.current = audioContextRef.current.createGain();
+        gainNodeRef.current.connect(audioContextRef.current.destination);
+      }
+      gainNodeRef.current.gain.value = voiceVolume;
+      audioSourceRef.current.connect(gainNodeRef.current);
       audioSourceRef.current.onended = cleanupPlayback;
 
       playbackStartTimeRef.current = audioContextRef.current.currentTime;
@@ -105,6 +119,13 @@ export const SpeakableText: React.FC<SpeakableTextProps> = ({ text }) => {
       }
     };
   }, [cleanupPlayback]);
+
+  // Reflect external voiceVolume changes while a buffer/gain node exists
+  useEffect(() => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = voiceVolume;
+    }
+  }, [voiceVolume]);
 
   // Split text into words and whitespace, preserving original formatting
   const wordsAndSpaces = text.split(/(\s+)/);
